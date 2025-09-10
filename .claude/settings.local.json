@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir:*)",
+      "Bash(\"C:\\Users\\vukla\\miniconda3\\envs\\vibeboost\\python.exe\" test_upload.py)",
+      "Bash(\"C:\\Users\\vukla\\miniconda3\\envs\\vibeboost\\python.exe\" test_gemini.py)",
+      "Bash(\"C:\\Users\\vukla\\miniconda3\\envs\\vibeboost\\python.exe\" main.py)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

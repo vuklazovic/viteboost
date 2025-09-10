@@ -1,0 +1,14 @@
+name: vibeboost
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - pip
+  - pip:
+    - fastapi
+    - uvicorn[standard]==0.24.0
+    - python-multipart==0.0.6
+    - pillow==10.1.0
+    - google-genai==1.35.0
+    - python-dotenv==1.0.0
