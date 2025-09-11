@@ -1,3 +1,5 @@
+generated/*
+uploads/*
 .env
 # Logs
 logs

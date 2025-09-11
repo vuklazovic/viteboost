@@ -1,8 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { Upload, Sparkles, Download } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import heroImage from "@/assets/hero-products.jpg";
 
 const HeroSection = () => {
+  const navigate = useNavigate();
+
   return (
     <section className="bg-gradient-hero min-h-[90vh] flex items-center">
       <div className="container mx-auto px-4 py-20">
@@ -28,10 +31,7 @@ const HeroSection = () => {
                 variant="hero" 
                 size="lg" 
                 className="text-lg px-8 py-6 group"
-                onClick={() => {
-                  const uploadSection = document.querySelector('[data-section="upload"]');
-                  uploadSection?.scrollIntoView({ behavior: 'smooth' });
-                }}
+                onClick={() => navigate('/generate')}
               >
                 <Upload className="h-5 w-5 transition-transform group-hover:scale-110" />
                 Start Creating Now

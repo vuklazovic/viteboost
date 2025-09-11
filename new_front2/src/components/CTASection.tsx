@@ -1,7 +1,10 @@
 import { Button } from "@/components/ui/button";
 import { Sparkles, ArrowRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 const CTASection = () => {
+  const navigate = useNavigate();
+
   return (
     <section className="py-24 bg-gradient-secondary">
       <div className="container mx-auto px-4">
@@ -26,10 +29,7 @@ const CTASection = () => {
               variant="cta" 
               size="lg" 
               className="text-lg px-12 py-6 group"
-              onClick={() => {
-                const uploadSection = document.querySelector('[data-section="upload"]');
-                uploadSection?.scrollIntoView({ behavior: 'smooth' });
-              }}
+              onClick={() => navigate('/generate')}
             >
               <Sparkles className="h-5 w-5 transition-transform group-hover:scale-110" />
               Try VibeBoost Free
