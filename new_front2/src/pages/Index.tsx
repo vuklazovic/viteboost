@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
 import HeroSection from "@/components/HeroSection";
 import ShowcaseSection from "@/components/ShowcaseSection";
@@ -7,15 +8,21 @@ import PricingSection from "@/components/PricingSection";
 import Footer from "@/components/Footer";
 
 const Index = () => {
+  const navigate = useNavigate();
+
+  const handleTryNow = () => {
+    navigate("/generate");
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
       <main>
-        <HeroSection />
-        <ShowcaseSection />
-        <FeaturesSection />
+        <HeroSection onTryNow={handleTryNow} />
+        <ShowcaseSection onTryNow={handleTryNow} />
+        <FeaturesSection onTryNow={handleTryNow} />
         <TestimonialsSection />
-        <PricingSection />
+        <PricingSection onTryNow={handleTryNow} />
  
       </main>
       <Footer />

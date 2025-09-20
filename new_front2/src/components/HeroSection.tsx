@@ -3,7 +3,11 @@ import { Upload, Sparkles, Download } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import heroImage from "@/assets/hero-products.jpg";
 
-const HeroSection = () => {
+interface HeroSectionProps {
+  onTryNow?: () => void;
+}
+
+const HeroSection = ({ onTryNow }: HeroSectionProps) => {
   const navigate = useNavigate();
 
   return (
@@ -31,7 +35,7 @@ const HeroSection = () => {
                 variant="hero" 
                 size="lg" 
                 className="text-lg px-8 py-6 group"
-                onClick={() => navigate('/generate')}
+                onClick={onTryNow || (() => navigate('/generate'))}
               >
                 <Upload className="h-5 w-5 transition-transform group-hover:scale-110" />
                 Start Creating Now

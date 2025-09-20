@@ -7,7 +7,11 @@ import mensAccessories from "@/assets/mens-accessories.jpg";
 import unisexLifestyle from "@/assets/unisex-lifestyle.jpg";
 import splitGenderProducts from "@/assets/split-gender-products.jpg";
 
-const ShowcaseSection = () => {
+interface ShowcaseSectionProps {
+  onTryNow?: () => void;
+}
+
+const ShowcaseSection = ({ onTryNow }: ShowcaseSectionProps) => {
   return (
     <section className="py-24 bg-muted/30">
       <div className="container mx-auto px-4">

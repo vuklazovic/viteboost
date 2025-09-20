@@ -30,9 +30,15 @@ const Header = () => {
         </Link>
         
         <nav className="hidden md:flex items-center gap-8">
-          <Link to="/generate" className="text-muted-foreground hover:text-foreground transition-colors">
-            Generate
-          </Link>
+          {isAuthenticated ? (
+            <Link to="/generate" className="text-muted-foreground hover:text-foreground transition-colors">
+              Generate
+            </Link>
+          ) : (
+            <Link to="/auth" className="text-muted-foreground hover:text-foreground transition-colors">
+              Generate
+            </Link>
+          )}
           <a href="#features" className="text-muted-foreground hover:text-foreground transition-colors">
             Features
           </a>

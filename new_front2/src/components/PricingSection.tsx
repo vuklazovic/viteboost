@@ -2,6 +2,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Check, Star } from "lucide-react";
 
+interface PricingSectionProps {
+  onTryNow?: () => void;
+}
+
 const plans = [
   {
     name: "Starter",
@@ -53,7 +57,7 @@ const plans = [
   }
 ];
 
-const PricingSection = () => {
+const PricingSection = ({ onTryNow }: PricingSectionProps) => {
   return (
     <section id="pricing" className="py-24 bg-background">
       <div className="container mx-auto px-4">
@@ -105,7 +109,12 @@ const PricingSection = () => {
                   ))}
                 </ul>
                 
-                <Button variant={plan.variant} size="lg" className="w-full">
+                <Button 
+                  variant={plan.variant} 
+                  size="lg" 
+                  className="w-full"
+                  onClick={onTryNow}
+                >
                   {plan.cta}
                 </Button>
               </CardContent>
