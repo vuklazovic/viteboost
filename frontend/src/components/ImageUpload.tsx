@@ -1,6 +1,7 @@
 import React, { useCallback, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
 import axios from 'axios'
+import { useAuth } from '../contexts/AuthContext'
 
 interface ImageUploadProps {
   onImagesGenerated: (images: any[]) => void
@@ -11,6 +12,10 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ onImagesGenerated, onGenerati
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
   const [isUploading, setIsUploading] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  
+  const { session, isAuthenticated } = useAuth()
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000'
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const file = acceptedFiles[0]
@@ -29,36 +34,56 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ onImagesGenerated, onGenerati
   })
 
   const handleUploadAndGenerate = async () => {
-    if (!uploadedFile) return
+    if (!uploadedFile || !isAuthenticated || !session) {
+      setError('Please sign in to upload and generate images')
+      return
+    }
 
     setIsUploading(true)
+    setError(null)
     onGeneratingStart()
 
     try {
       const formData = new FormData()
       formData.append('file', uploadedFile)
 
-      const uploadResponse = await axios.post('http://127.0.0.1:8000/upload', formData, {
+      // Upload with auth token
+      const uploadResponse = await axios.post(`${API_BASE_URL}/upload`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${session.access_token}`
         },
       })
 
       const { file_id } = uploadResponse.data
 
-      const generateResponse = await axios.post('http://127.0.0.1:8000/generate', null, {
-        params: { file_id }
+      // Generate with auth token
+      const generateResponse = await axios.post(`${API_BASE_URL}/generate`, null, {
+        params: { file_id },
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
       })
 
       const generatedImages = generateResponse.data.generated_images.map((img: any) => ({
         ...img,
-        url: `http://127.0.0.1:8000${img.url}`
+        url: `${API_BASE_URL}${img.url}`
       }))
 
       onImagesGenerated(generatedImages)
     } catch (error) {
       console.error('Error generating images:', error)
-      alert('Failed to generate images. Please check that the backend is running and your API key is configured.')
+      if (axios.isAxiosError(error)) {
+        if (error.response?.status === 401) {
+          setError('Authentication failed. Please sign in again.')
+        } else if (error.response?.status === 403) {
+          setError('Access denied. You may not own this file.')
+        } else {
+          setError(error.response?.data?.detail || 'Failed to generate images')
+        }
+      } else {
+        setError('Failed to generate images. Please check that the backend is running.')
+      }
     } finally {
       setIsUploading(false)
     }
@@ -67,6 +92,12 @@ const ImageUpload: React.FC<ImageUploadProps> = ({ onImagesGenerated, onGenerati
   return (
     <div>
       <h2 className="section-title">Upload Your Product Image</h2>
+      
+      {error && (
+        <div className="error-message" style={{ marginBottom: '1rem' }}>
+          {error}
+        </div>
+      )}
       
       <div
         {...getRootProps()}
