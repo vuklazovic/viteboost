@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import Header from "@/components/Header";
 import HeroSection from "@/components/HeroSection";
 import ShowcaseSection from "@/components/ShowcaseSection";
@@ -11,13 +12,22 @@ import { ArrowRight, Sparkles } from "lucide-react";
 
 const Landing = () => {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
 
   const handleTryNow = () => {
-    navigate("/auth");
+    if (isAuthenticated) {
+      navigate("/generate");
+    } else {
+      navigate("/auth");
+    }
   };
 
   const handleGenerateClick = () => {
-    navigate("/auth");
+    if (isAuthenticated) {
+      navigate("/generate");
+    } else {
+      navigate("/auth");
+    }
   };
 
   return (

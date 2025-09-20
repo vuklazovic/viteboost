@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Upload, Sparkles, Download } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 import heroImage from "@/assets/hero-products.jpg";
 
 interface HeroSectionProps {
@@ -9,6 +10,20 @@ interface HeroSectionProps {
 
 const HeroSection = ({ onTryNow }: HeroSectionProps) => {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+
+  const handleStartCreating = () => {
+    if (onTryNow) {
+      onTryNow();
+    } else {
+      // Check if user is authenticated before navigating to generate
+      if (isAuthenticated) {
+        navigate('/generate');
+      } else {
+        navigate('/auth');
+      }
+    }
+  };
 
   return (
     <section className="bg-gradient-hero min-h-[90vh] flex items-center">
@@ -35,7 +50,7 @@ const HeroSection = ({ onTryNow }: HeroSectionProps) => {
                 variant="hero" 
                 size="lg" 
                 className="text-lg px-8 py-6 group"
-                onClick={onTryNow || (() => navigate('/generate'))}
+                onClick={handleStartCreating}
               >
                 <Upload className="h-5 w-5 transition-transform group-hover:scale-110" />
                 Start Creating Now
