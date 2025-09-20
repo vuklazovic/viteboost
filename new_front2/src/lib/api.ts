@@ -1,12 +1,7 @@
 import axios from 'axios';
 
-// API Configuration
-const API_BASE_URL = 'http://127.0.0.1:8000';
-
-const api = axios.create({
-  baseURL: API_BASE_URL,
-  timeout: 300000, // 5 minutes for image generation
-});
+// Use the global axios instance which has auth interceptors configured
+const api = axios;
 
 // Types
 export interface GeneratedImage {
@@ -29,15 +24,18 @@ export interface GenerateResponse {
 
 // API Functions
 export const uploadImage = async (file: File): Promise<UploadResponse> => {
+  console.log('Uploading image:', file.name, file.size, file.type);
   const formData = new FormData();
   formData.append('file', file);
 
+  console.log('Making API call to /upload...');
   const response = await api.post<UploadResponse>('/upload', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
   });
 
+  console.log('Upload response:', response.data);
   return response.data;
 };
 
@@ -47,6 +45,7 @@ export const generateImages = async (fileId: string): Promise<GenerateResponse> 
   });
 
   // Transform URLs to be absolute
+  const API_BASE_URL = 'http://127.0.0.1:8000';
   const transformedResponse = {
     ...response.data,
     generated_images: response.data.generated_images.map(img => ({

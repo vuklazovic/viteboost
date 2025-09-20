@@ -2,7 +2,8 @@ import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Upload, FileImage, ArrowRight, Sparkles, Zap, CheckCircle } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Upload, FileImage, ArrowRight, Sparkles, Zap, CheckCircle, AlertCircle, X } from "lucide-react";
 import { useDropzone } from 'react-dropzone';
 import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -16,6 +17,7 @@ const UploadSection = ({ onImagesGenerated }: UploadSectionProps) => {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
+  const [fileError, setFileError] = useState<string | null>(null);
 
   // Generate images mutation
   const generateImagesMutation = useMutation({
@@ -64,25 +66,74 @@ const UploadSection = ({ onImagesGenerated }: UploadSectionProps) => {
   });
 
   // Dropzone configuration
-  const onDrop = useCallback((acceptedFiles: File[]) => {
+  const onDrop = useCallback((acceptedFiles: File[], fileRejections: any[]) => {
+    console.log('Files dropped/selected:', acceptedFiles);
+    console.log('File rejections:', fileRejections);
+    console.log('Accepted files length:', acceptedFiles.length);
+    
+    // Clear any previous errors
+    setFileError(null);
+    
     const file = acceptedFiles[0];
     if (file) {
+      console.log('File selected:', file.name, file.size, file.type);
       setUploadedFile(file);
       setPreviewUrl(URL.createObjectURL(file));
+      console.log('File state updated');
+    } else {
+      console.log('No file selected');
     }
   }, []);
 
-  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+  const { getRootProps, getInputProps, isDragActive, fileRejections } = useDropzone({
     onDrop,
     accept: {
-      'image/*': ['.jpeg', '.jpg', '.png', '.webp']
+      'image/jpeg': ['.jpg', '.jpeg'],
+      'image/png': ['.png'],
+      'image/webp': ['.webp']
     },
     multiple: false,
     maxSize: 10 * 1024 * 1024, // 10MB
+    onDropRejected: (fileRejections) => {
+      console.log('Files rejected:', fileRejections);
+      fileRejections.forEach((rejection) => {
+        console.log('Rejection reason:', rejection.errors);
+        rejection.errors.forEach((error) => {
+          console.log('Error code:', error.code, 'Error message:', error.message);
+          
+          // Set user-friendly error messages
+          let errorMessage = '';
+          switch (error.code) {
+            case 'file-invalid-type':
+              errorMessage = 'Please select a valid image file (JPG, PNG, or WEBP)';
+              break;
+            case 'file-too-large':
+              errorMessage = 'File is too large. Please select an image smaller than 10MB';
+              break;
+            case 'file-too-small':
+              errorMessage = 'File is too small. Please select a larger image';
+              break;
+            case 'too-many-files':
+              errorMessage = 'Please select only one image at a time';
+              break;
+            default:
+              errorMessage = 'File upload failed. Please try a different image';
+          }
+          
+          setFileError(errorMessage);
+          toast.error(`❌ ${errorMessage}`);
+        });
+      });
+    }
   });
 
   const handleGenerate = () => {
-    if (!uploadedFile) return;
+    console.log('Generate button clicked, uploadedFile:', uploadedFile);
+    if (!uploadedFile) {
+      console.log('No file to generate');
+      return;
+    }
+    console.log('Starting image generation...');
     generateImagesMutation.mutate(uploadedFile);
   };
 
@@ -90,6 +141,7 @@ const UploadSection = ({ onImagesGenerated }: UploadSectionProps) => {
     setUploadedFile(null);
     setPreviewUrl(null);
     setProgress(0);
+    setFileError(null);
     if (previewUrl) {
       URL.revokeObjectURL(previewUrl);
     }
@@ -114,6 +166,26 @@ const UploadSection = ({ onImagesGenerated }: UploadSectionProps) => {
         </div>
 
         <div className="max-w-4xl mx-auto">
+          {/* File Error Alert */}
+          {fileError && (
+            <Alert className="mb-6 border-red-200 bg-red-50">
+              <AlertCircle className="h-4 w-4 text-red-600" />
+              <AlertDescription className="text-red-800">
+                <div className="flex items-center justify-between">
+                  <span>{fileError}</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setFileError(null)}
+                    className="h-6 w-6 p-0 text-red-600 hover:text-red-800"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+
           {!uploadedFile ? (
             <Card className={`border-2 border-dashed transition-all duration-300 overflow-hidden ${
               isDragActive ? 
