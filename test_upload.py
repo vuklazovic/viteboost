@@ -9,7 +9,7 @@ except Exception as e:
     print("Backend connection failed:", e)
 
 # Test upload endpoint with a simple test
-try:
+try:asd
     # Create a small test image file
     from PIL import Image
     img = Image.new('RGB', (100, 100), color='red')
