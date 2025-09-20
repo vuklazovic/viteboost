@@ -68,11 +68,14 @@ async def generate_product_images(
         raise HTTPException(status_code=404, detail="File not found")
     
     try:
-        # Check credits before generation
+        # Determine and pre-charge credits immediately
         cost = settings.NUM_IMAGES * settings.CREDIT_COST_PER_IMAGE
         user_credits = credit_manager.get_credits(current_user["user_id"])
         if user_credits < cost:
             raise HTTPException(status_code=402, detail="Insufficient credits")
+
+        # Deduct up front; will refund on failure
+        remaining_after_charge = credit_manager.consume_credits(current_user["user_id"], cost)
 
         generated_images = await generate_images(str(file_path), file_id)
         
@@ -81,19 +84,18 @@ async def generate_product_images(
             if "filename" in image_info:
                 file_manager.add_generated_file(file_id, image_info["filename"])
         
-        # Deduct credits only after successful generation
-        try:
-            credit_manager.consume_credits(current_user["user_id"], cost)
-        except ValueError:
-            # Race condition or unexpected state; do not fail the response
-            pass
-
         return {
             "file_id": file_id,
             "generated_images": generated_images,
-            "user_id": current_user["user_id"]
+            "user_id": current_user["user_id"],
+            "credits": remaining_after_charge
         }
     except Exception as e:
+        # Refund on failure
+        try:
+            credit_manager.add_credits(current_user["user_id"], cost)
+        except Exception:
+            pass
         raise HTTPException(status_code=500, detail=f"Generation failed: {str(e)}")
 
 @router.get("/download/{filename}")

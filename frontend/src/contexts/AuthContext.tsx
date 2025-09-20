@@ -34,7 +34,10 @@ interface AuthContextType {
   loading: boolean
   emailConfirmationRequired: boolean
   credits: number
+  costPerImage: number
+  numImages: number
   refreshCredits: () => Promise<void>
+  adjustCredits: (delta: number) => void
   login: (email: string, password: string) => Promise<void>
   signup: (email: string, password: string) => Promise<{ requiresEmailConfirmation: boolean }>
   loginWithGoogle: () => Promise<void>
@@ -59,6 +62,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [loading, setLoading] = useState(true)
   const [emailConfirmationRequired, setEmailConfirmationRequired] = useState(false)
   const [credits, setCredits] = useState<number>(0)
+  const [costPerImage, setCostPerImage] = useState<number>(1)
+  const [numImages, setNumImages] = useState<number>(3)
 
   // Set up axios interceptor for auth token
   useEffect(() => {
@@ -382,9 +387,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (!session?.access_token) return
       const res = await axios.get('/auth/credits')
       setCredits(res.data?.credits ?? 0)
+      if (typeof res.data?.cost_per_image === 'number') setCostPerImage(res.data.cost_per_image)
+      if (typeof res.data?.num_images === 'number') setNumImages(res.data.num_images)
     } catch (e) {
       // Ignore silently; keep prior credits
     }
+  }
+
+  const adjustCredits = (delta: number) => {
+    setCredits(prev => Math.max(0, prev + delta))
   }
 
   const value: AuthContextType = {
@@ -393,7 +404,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     loading,
     emailConfirmationRequired,
     credits,
+    costPerImage,
+    numImages,
     refreshCredits,
+    adjustCredits,
     login,
     signup,
     loginWithGoogle,

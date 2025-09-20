@@ -19,7 +19,7 @@ const UploadSection = ({ onImagesGenerated }: UploadSectionProps) => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
   const [fileError, setFileError] = useState<string | null>(null);
-  const { refreshCredits } = useAuth();
+  const { refreshCredits, costPerImage, numImages, adjustCredits, credits } = useAuth();
 
   // Generate images mutation
   const generateImagesMutation = useMutation({
@@ -27,6 +27,9 @@ const UploadSection = ({ onImagesGenerated }: UploadSectionProps) => {
     onMutate: () => {
       setProgress(0);
       toast.info('🚀 Starting AI image generation...');
+      // Optimistically deduct credits immediately
+      const cost = (costPerImage || 1) * (numImages || 1);
+      if (cost > 0) adjustCredits(-cost);
       
       // Simulate progress
       const interval = setInterval(() => {
@@ -39,7 +42,7 @@ const UploadSection = ({ onImagesGenerated }: UploadSectionProps) => {
         });
       }, 500);
       
-      return { interval };
+      return { interval, cost } as { interval: any; cost: number };
     },
     onSuccess: (images, _, context) => {
       if (context?.interval) {
@@ -66,6 +69,10 @@ const UploadSection = ({ onImagesGenerated }: UploadSectionProps) => {
       setProgress(0);
       console.error('Generation failed:', error);
       toast.error('❌ Generation failed. Please check your backend connection.');
+      // Refund optimistic deduction
+      if (context && typeof context.cost === 'number' && context.cost > 0) {
+        adjustCredits(context.cost);
+      }
     }
   });
 
@@ -135,6 +142,11 @@ const UploadSection = ({ onImagesGenerated }: UploadSectionProps) => {
     console.log('Generate button clicked, uploadedFile:', uploadedFile);
     if (!uploadedFile) {
       console.log('No file to generate');
+      return;
+    }
+    const cost = (costPerImage || 1) * (numImages || 1);
+    if ((credits ?? 0) < cost) {
+      toast.error(`Not enough credits. Need ${cost}, you have ${credits}.`);
       return;
     }
     console.log('Starting image generation...');
@@ -283,12 +295,21 @@ const UploadSection = ({ onImagesGenerated }: UploadSectionProps) => {
                         size="lg" 
                         className="text-xl px-12 py-6"
                         onClick={handleGenerate}
-                        disabled={generateImagesMutation.isPending}
+                        disabled={generateImagesMutation.isPending || (credits ?? 0) < ((costPerImage || 1) * (numImages || 1))}
                       >
                         <Sparkles className="h-6 w-6 animate-pulse" />
                         Create AI Magic
                         <ArrowRight className="h-6 w-6" />
                       </Button>
+
+                      <div className="text-sm text-muted-foreground">
+                        Cost per run: <span className="font-medium text-foreground">{(costPerImage || 1) * (numImages || 1)} credits</span>
+                        <span className="mx-2">•</span>
+                        You have: <span className="font-medium text-foreground">{credits ?? 0}</span>
+                        {(credits ?? 0) < ((costPerImage || 1) * (numImages || 1)) && (
+                          <span className="ml-2 text-red-500">Not enough credits</span>
+                        )}
+                      </div>
                       
                       <Button
                         variant="outline"
