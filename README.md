@@ -108,7 +108,20 @@ vibeboost/
 Create `backend/.env` with:
 ```
 GEMINI_API_KEY=your_gemini_api_key_here
+INITIAL_CREDITS=100
+CREDIT_COST_PER_IMAGE=1
+NUM_IMAGES=3
 ```
+
+## 🗄️ Supabase Setup (Credits)
+
+Run the migration SQL in your Supabase SQL editor:
+
+- File: `backend/db/migrations/001_create_user_credits.sql`
+- This creates `public.user_credits` with `user_id uuid primary key`, `credits integer`, timestamps, and enables RLS (no anon access).
+- The backend uses the Service Role key to manage balances.
+
+On backend startup, a warning is logged if the table is missing with the path to this migration.
 
 ## 🐛 Troubleshooting
 

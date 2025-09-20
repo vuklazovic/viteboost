@@ -33,6 +33,8 @@ interface AuthContextType {
   session: Session | null
   loading: boolean
   emailConfirmationRequired: boolean
+  credits: number
+  refreshCredits: () => Promise<void>
   login: (email: string, password: string) => Promise<void>
   signup: (email: string, password: string) => Promise<{ requiresEmailConfirmation: boolean }>
   loginWithGoogle: () => Promise<void>
@@ -56,6 +58,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
   const [emailConfirmationRequired, setEmailConfirmationRequired] = useState(false)
+  const [credits, setCredits] = useState<number>(0)
 
   // Set up axios interceptor for auth token
   useEffect(() => {
@@ -163,6 +166,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUser(userData)
       setSession(sessionData)
       setEmailConfirmationRequired(false)
+      // Fetch credits after confirming email
+      await refreshCredits()
       
       // Store in localStorage
       localStorage.setItem('auth_session', JSON.stringify(sessionData))
@@ -228,6 +233,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     checkForEmailConfirmation()
   }, [])
 
+  // Fetch credits whenever we have a valid session and user
+  useEffect(() => {
+    if (user && session?.access_token) {
+      refreshCredits()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id, session?.access_token])
+
   const login = async (email: string, password: string): Promise<void> => {
     try {
       const response = await axios.post('/auth/login', { email, password })
@@ -239,6 +252,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // Store in localStorage
       localStorage.setItem('auth_session', JSON.stringify(sessionData))
       localStorage.setItem('auth_user', JSON.stringify(userData))
+      // Fetch credits after login
+      await refreshCredits()
     } catch (error) {
       // Re-throw the original error so LoginForm can handle it
       throw error
@@ -262,6 +277,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         localStorage.setItem('auth_user', JSON.stringify(userData))
         
         toast.success('Account created successfully!')
+        await refreshCredits()
         return { requiresEmailConfirmation: false }
       } 
       // Check if we got a message response (email confirmation required)
@@ -297,6 +313,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
     
     toast.success('Logged out successfully')
+    setCredits(0)
   }
 
   const checkEmailExists = async (email: string): Promise<EmailCheckResult> => {
@@ -360,11 +377,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }
 
+  const refreshCredits = async (): Promise<void> => {
+    try {
+      if (!session?.access_token) return
+      const res = await axios.get('/auth/credits')
+      setCredits(res.data?.credits ?? 0)
+    } catch (e) {
+      // Ignore silently; keep prior credits
+    }
+  }
+
   const value: AuthContextType = {
     user,
     session,
     loading,
     emailConfirmationRequired,
+    credits,
+    refreshCredits,
     login,
     signup,
     loginWithGoogle,

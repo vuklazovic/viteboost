@@ -15,7 +15,7 @@ import { useAuthModal } from "@/hooks/useAuthModal";
 import { AuthModal } from "@/components/auth/AuthModal";
 
 const Header = () => {
-  const { user, logout, isAuthenticated } = useAuth();
+  const { user, logout, isAuthenticated, credits, refreshCredits } = useAuth();
   const authModal = useAuthModal();
   const navigate = useNavigate();
 
@@ -60,6 +60,17 @@ const Header = () => {
         </nav>
         
         <div className="flex items-center gap-3">
+          {isAuthenticated && (
+            <div
+              className="hidden sm:flex items-center gap-2 rounded-full border border-border px-3 py-1 text-sm text-foreground"
+              title="Your available credits"
+              onClick={() => refreshCredits()}
+            >
+              <Zap className="h-4 w-4 text-primary" />
+              <span>{credits}</span>
+              <span className="text-muted-foreground">credits</span>
+            </div>
+          )}
           {isAuthenticated ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>

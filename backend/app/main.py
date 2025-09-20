@@ -24,6 +24,22 @@ app.mount("/generated", StaticFiles(directory=settings.GENERATED_DIR), name="gen
 app.include_router(auth.router)
 app.include_router(files.router)
 
+@app.on_event("startup")
+async def vb_startup_check():
+    try:
+        from app.services.credits import credit_manager
+        import logging
+        if not settings.SUPABASE_SERVICE_ROLE_KEY:
+            logging.getLogger("uvicorn.error").warning(
+                "SUPABASE_SERVICE_ROLE_KEY is missing; credits initialization and charging will fail."
+            )
+        if not credit_manager.table_exists():
+            logging.getLogger("uvicorn.error").warning(
+                "Supabase table 'user_credits' not found. Apply migration at backend/db/migrations/001_create_user_credits.sql"
+            )
+    except Exception as e:
+        logging.getLogger("uvicorn.error").warning(f"Credits table check failed: {e}")
+
 @app.get("/")
 async def root():
     return {"message": "VibeBoost API is running"}

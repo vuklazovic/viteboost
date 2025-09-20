@@ -6,6 +6,7 @@ from typing import Dict, Any
 
 from app.services.auth import get_current_user
 from app.services.file_manager import file_manager
+from app.services.credits import credit_manager
 from app.services.image_generator import generate_images
 from app.core.config import settings
 
@@ -67,6 +68,12 @@ async def generate_product_images(
         raise HTTPException(status_code=404, detail="File not found")
     
     try:
+        # Check credits before generation
+        cost = settings.NUM_IMAGES * settings.CREDIT_COST_PER_IMAGE
+        user_credits = credit_manager.get_credits(current_user["user_id"])
+        if user_credits < cost:
+            raise HTTPException(status_code=402, detail="Insufficient credits")
+
         generated_images = await generate_images(str(file_path), file_id)
         
         # Register generated files
@@ -74,6 +81,13 @@ async def generate_product_images(
             if "filename" in image_info:
                 file_manager.add_generated_file(file_id, image_info["filename"])
         
+        # Deduct credits only after successful generation
+        try:
+            credit_manager.consume_credits(current_user["user_id"], cost)
+        except ValueError:
+            # Race condition or unexpected state; do not fail the response
+            pass
+
         return {
             "file_id": file_id,
             "generated_images": generated_images,

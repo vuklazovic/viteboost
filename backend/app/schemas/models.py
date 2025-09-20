@@ -79,3 +79,8 @@ class PasswordResetResponse(BaseModel):
     message: str
     success: bool
     error: Optional[str] = None
+
+class CreditsResponse(BaseModel):
+    credits: int
+    cost_per_image: int
+    num_images: int

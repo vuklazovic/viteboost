@@ -10,7 +10,9 @@ import asyncio
 import concurrent.futures
 import time
 
-GENERATED_DIR = Path("generated")
+from app.core.config import settings
+
+GENERATED_DIR = settings.GENERATED_DIR
 
 async def analyze_image_and_generate_prompts(client, image_path: str, num_prompts: int) -> List[str]:
     """Analyze the uploaded image and generate dynamic prompts based on its content"""
@@ -76,8 +78,8 @@ async def generate_images(image_path: str, file_id: str) -> List[dict]:
     if not key:
         raise ValueError("GEMINI_API_KEY environment variable is required")
     
-    # Get number of images from environment variable, default to 3
-    num_images = int(os.getenv("NUM_IMAGES", "3"))
+    # Use configured number of images
+    num_images = settings.NUM_IMAGES
     print(f"Generating {num_images} images...")
     
     try:

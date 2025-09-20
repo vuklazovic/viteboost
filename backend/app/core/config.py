@@ -31,6 +31,13 @@ class Settings:
     # Frontend URL
     FRONTEND_URL: str = "http://localhost:8081"
     
+    # Credits Configuration
+    INITIAL_CREDITS: int = int(os.getenv("INITIAL_CREDITS", "100"))
+    CREDIT_COST_PER_IMAGE: int = int(os.getenv("CREDIT_COST_PER_IMAGE", "1"))
+
+    # Generation configuration
+    NUM_IMAGES: int = int(os.getenv("NUM_IMAGES", "3"))
+    
     def __init__(self):
         if not all([self.SUPABASE_URL, self.SUPABASE_ANON_KEY]):
             raise ValueError("Missing required Supabase configuration. Please check your .env file.")

@@ -2,10 +2,12 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from typing import Dict, Any
 
 from app.services.auth import AuthService, get_current_user
+from app.services.credits import credit_manager
+from app.core.config import settings
 from app.schemas.models import (
     UserSignUp, UserSignIn, RefreshToken, AuthResponse, 
     MessageResponse, UserProfile, UserResponse, SessionResponse, EmailCheckResponse,
-    ForgotPasswordRequest, ResetPasswordRequest, PasswordResetResponse
+    ForgotPasswordRequest, ResetPasswordRequest, PasswordResetResponse, CreditsResponse
 )
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
@@ -58,6 +60,12 @@ async def signup(user_data: UserSignUp):
     
     # Check if session exists (email confirmation might be required)
     if result["session"] is None:
+        # Initialize credits on first registration even if email confirmation is pending
+        try:
+            if result.get("user") and getattr(result["user"], "id", None):
+                credit_manager.ensure_user(result["user"].id, settings.INITIAL_CREDITS)
+        except Exception:
+            pass
         return MessageResponse(
             message="Please check your email to confirm your account before signing in"
         )
@@ -76,6 +84,12 @@ async def signup(user_data: UserSignUp):
         token_type="bearer"
     )
     
+    # Initialize credits for the new user
+    try:
+        credit_manager.ensure_user(result["user"].id, settings.INITIAL_CREDITS)
+    except Exception:
+        pass
+
     return AuthResponse(
         user=user_response,
         session=session_response,
@@ -245,3 +259,22 @@ async def reset_password(request: ResetPasswordRequest):
     """Complete password reset using token from email"""
     result = AuthService.reset_password(request.access_token, request.new_password)
     return MessageResponse(message=result["message"])
+
+@router.get("/credits", response_model=CreditsResponse)
+async def get_credits(current_user: Dict[str, Any] = Depends(get_current_user)):
+    # Ensure credits record exists; surface errors to caller for easier setup debugging
+    if not credit_manager.table_exists():
+        raise HTTPException(status_code=500, detail="Credits table missing. Apply migration at backend/db/migrations/001_create_user_credits.sql")
+
+    if not settings.SUPABASE_SERVICE_ROLE_KEY:
+        raise HTTPException(status_code=500, detail="SUPABASE_SERVICE_ROLE_KEY is not configured on the backend")
+
+    if not credit_manager.has_user(current_user["user_id"]):
+        credit_manager.ensure_user(current_user["user_id"], settings.INITIAL_CREDITS)
+
+    credits = credit_manager.get_credits(current_user["user_id"])
+    return CreditsResponse(
+        credits=credits,
+        cost_per_image=settings.CREDIT_COST_PER_IMAGE,
+        num_images=settings.NUM_IMAGES,
+    )

@@ -8,6 +8,7 @@ import { useDropzone } from 'react-dropzone';
 import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { uploadAndGenerateImages, GeneratedImage } from '@/lib/api';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface UploadSectionProps {
   onImagesGenerated?: (images: GeneratedImage[]) => void;
@@ -18,6 +19,7 @@ const UploadSection = ({ onImagesGenerated }: UploadSectionProps) => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
   const [fileError, setFileError] = useState<string | null>(null);
+  const { refreshCredits } = useAuth();
 
   // Generate images mutation
   const generateImagesMutation = useMutation({
@@ -54,6 +56,8 @@ const UploadSection = ({ onImagesGenerated }: UploadSectionProps) => {
           resultsSection.scrollIntoView({ behavior: 'smooth' });
         }
       }, 500);
+      // Refresh credits after a successful generation
+      refreshCredits();
     },
     onError: (error, _, context) => {
       if (context?.interval) {
