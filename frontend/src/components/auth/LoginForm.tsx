@@ -22,6 +22,7 @@ type LoginFormData = z.infer<typeof loginSchema>
 
 interface LoginFormProps {
   onSwitchToRegister: () => void
+  onSwitchToForgotPassword?: () => void
   onSuccess?: () => void
 }
 
@@ -30,7 +31,7 @@ interface ConflictInfo {
   suggestedAction: 'google_login' | 'email_login' | 'choose_method' | 'signup' | 'try_again'
 }
 
-export function LoginForm({ onSwitchToRegister, onSuccess }: LoginFormProps) {
+export function LoginForm({ onSwitchToRegister, onSwitchToForgotPassword, onSuccess }: LoginFormProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
   const [conflictInfo, setConflictInfo] = useState<ConflictInfo | null>(null)
@@ -211,15 +212,26 @@ export function LoginForm({ onSwitchToRegister, onSuccess }: LoginFormProps) {
         Continue with Google
       </Button>
 
-      <div className="text-center text-sm">
-        <span className="text-muted-foreground">Don't have an account? </span>
-        <button
-          type="button"
-          className="text-primary hover:underline font-medium"
-          onClick={onSwitchToRegister}
-        >
-          Sign up
-        </button>
+      <div className="text-center text-sm space-y-2">
+        <div>
+          <button
+            type="button"
+            className="text-primary hover:underline font-medium"
+            onClick={() => onSwitchToForgotPassword?.()}
+          >
+            Forgot your password?
+          </button>
+        </div>
+        <div>
+          <span className="text-muted-foreground">Don't have an account? </span>
+          <button
+            type="button"
+            className="text-primary hover:underline font-medium"
+            onClick={onSwitchToRegister}
+          >
+            Sign up
+          </button>
+        </div>
       </div>
     </div>
   )

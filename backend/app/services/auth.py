@@ -148,6 +148,85 @@ class AuthService:
                 detail=f"Token refresh failed: {str(e)}"
             )
 
+    @staticmethod
+    def request_password_reset(email: str) -> Dict[str, Any]:
+        """Request password reset email for existing email users"""
+        try:
+            # First check if user exists and is an email user
+            email_check = AuthService.check_email_exists(email)
+            
+            if not email_check.get("exists"):
+                # For security, don't reveal if email exists or not
+                return {
+                    "message": "If this email is registered, you will receive a password reset link.",
+                    "success": True
+                }
+            
+            if email_check.get("is_google_user") and not email_check.get("is_email_user"):
+                # Google-only user cannot reset password
+                return {
+                    "message": "This account uses Google sign-in. Please sign in with Google.",
+                    "success": False,
+                    "error": "google_only_account"
+                }
+            
+            # Send password reset email via Supabase
+            response = supabase.auth.reset_password_email(
+                email,
+                {
+                    "redirect_to": f"{settings.FRONTEND_URL}/reset-password"
+                }
+            )
+            
+            return {
+                "message": "If this email is registered, you will receive a password reset link.",
+                "success": True
+            }
+            
+        except Exception as e:
+            # Log error but return generic message for security
+            return {
+                "message": "If this email is registered, you will receive a password reset link.",
+                "success": True
+            }
+
+    @staticmethod
+    def reset_password(access_token: str, new_password: str) -> Dict[str, Any]:
+        """Reset password using token from email"""
+        try:
+            # Set the session with the access token from password reset email
+            supabase.auth.set_session(access_token, "")
+            
+            # Update the password
+            response = supabase.auth.update_user({
+                "password": new_password
+            })
+            
+            if response.user:
+                return {
+                    "message": "Password updated successfully",
+                    "success": True,
+                    "user": response.user
+                }
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Failed to update password"
+                )
+                
+        except Exception as e:
+            error_msg = str(e).lower()
+            if "invalid token" in error_msg or "expired" in error_msg:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Password reset link is invalid or expired. Please request a new one."
+                )
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Password reset failed: {str(e)}"
+                )
+
 def verify_token(token: str) -> Dict[str, Any]:
     try:
         payload = jwt.decode(

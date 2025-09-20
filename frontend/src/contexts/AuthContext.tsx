@@ -39,6 +39,8 @@ interface AuthContextType {
   logout: () => void
   handleEmailCallback: (urlFragment: string) => Promise<void>
   checkEmailExists: (email: string) => Promise<EmailCheckResult>
+  requestPasswordReset: (email: string) => Promise<{ success: boolean; error?: string }>
+  resetPassword: (accessToken: string, newPassword: string) => Promise<void>
   isAuthenticated: boolean
 }
 
@@ -323,6 +325,41 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }
 
+  const requestPasswordReset = async (email: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const response = await axios.post('/auth/forgot-password', { email })
+      return {
+        success: response.data.success,
+        error: response.data.error
+      }
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.data) {
+        return {
+          success: false,
+          error: error.response.data.error || 'Failed to send reset email'
+        }
+      }
+      return {
+        success: false,
+        error: 'Failed to send reset email'
+      }
+    }
+  }
+
+  const resetPassword = async (accessToken: string, newPassword: string): Promise<void> => {
+    try {
+      await axios.post('/auth/reset-password', {
+        access_token: accessToken,
+        new_password: newPassword
+      })
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        throw error
+      }
+      throw new Error('Failed to reset password')
+    }
+  }
+
   const value: AuthContextType = {
     user,
     session,
@@ -334,6 +371,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     logout,
     handleEmailCallback,
     checkEmailExists,
+    requestPasswordReset,
+    resetPassword,
     isAuthenticated: !!user && !!session
   }
 

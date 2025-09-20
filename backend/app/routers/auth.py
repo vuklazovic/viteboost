@@ -4,7 +4,8 @@ from typing import Dict, Any
 from app.services.auth import AuthService, get_current_user
 from app.schemas.models import (
     UserSignUp, UserSignIn, RefreshToken, AuthResponse, 
-    MessageResponse, UserProfile, UserResponse, SessionResponse, EmailCheckResponse
+    MessageResponse, UserProfile, UserResponse, SessionResponse, EmailCheckResponse,
+    ForgotPasswordRequest, ResetPasswordRequest, PasswordResetResponse
 )
 
 router = APIRouter(prefix="/auth", tags=["authentication"])
@@ -232,3 +233,15 @@ async def check_email(email: str):
         result["suggested_action"] = suggested_action
     
     return EmailCheckResponse(**result)
+
+@router.post("/forgot-password", response_model=PasswordResetResponse)
+async def forgot_password(request: ForgotPasswordRequest):
+    """Request password reset email"""
+    result = AuthService.request_password_reset(request.email)
+    return PasswordResetResponse(**result)
+
+@router.post("/reset-password", response_model=MessageResponse)
+async def reset_password(request: ResetPasswordRequest):
+    """Complete password reset using token from email"""
+    result = AuthService.reset_password(request.access_token, request.new_password)
+    return MessageResponse(message=result["message"])

@@ -67,3 +67,15 @@ class EmailCheckResponse(BaseModel):
     is_email_user: Optional[bool] = None
     created_at: Optional[str] = None
     suggested_action: Optional[str] = None
+
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+class ResetPasswordRequest(BaseModel):
+    access_token: str
+    new_password: str
+
+class PasswordResetResponse(BaseModel):
+    message: str
+    success: bool
+    error: Optional[str] = None
