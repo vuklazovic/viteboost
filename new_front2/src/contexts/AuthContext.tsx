@@ -20,9 +20,11 @@ interface AuthContextType {
   user: User | null
   session: Session | null
   loading: boolean
+  emailConfirmationRequired: boolean
   login: (email: string, password: string) => Promise<void>
-  signup: (email: string, password: string) => Promise<void>
+  signup: (email: string, password: string) => Promise<{ requiresEmailConfirmation: boolean }>
   logout: () => void
+  handleEmailCallback: (urlFragment: string) => Promise<void>
   isAuthenticated: boolean
 }
 
@@ -37,6 +39,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
+  const [emailConfirmationRequired, setEmailConfirmationRequired] = useState(false)
 
   // Set up axios interceptor for auth token
   useEffect(() => {
@@ -94,26 +97,119 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return () => axios.interceptors.response.eject(interceptor)
   }, [session])
 
-  // Load stored auth data on mount
-  useEffect(() => {
-    const storedSession = localStorage.getItem('auth_session')
-    const storedUser = localStorage.getItem('auth_user')
-    
-    if (storedSession && storedUser) {
-      try {
-        const sessionData = JSON.parse(storedSession)
-        const userData = JSON.parse(storedUser)
-        
-        setSession(sessionData)
-        setUser(userData)
-      } catch (error) {
-        console.error('Failed to parse stored auth data:', error)
-        localStorage.removeItem('auth_session')
-        localStorage.removeItem('auth_user')
+  // Define handleEmailCallback function first
+  const handleEmailCallback = async (urlFragment: string): Promise<void> => {
+    try {
+      console.log('Processing email callback with URL fragment:', urlFragment)
+      
+      // Parse URL fragment to extract tokens
+      const params = new URLSearchParams(urlFragment.substring(1)) // Remove # from start
+      const accessToken = params.get('access_token')
+      const refreshToken = params.get('refresh_token')
+      const expiresIn = params.get('expires_in')
+      
+      console.log('Extracted tokens:', { 
+        accessToken: accessToken ? 'present' : 'missing',
+        refreshToken: refreshToken ? 'present' : 'missing',
+        expiresIn 
+      })
+      
+      if (!accessToken || !refreshToken) {
+        throw new Error('Missing required tokens in callback URL')
       }
+      
+      // Create session object
+      const sessionData: Session = {
+        access_token: accessToken,
+        refresh_token: refreshToken,
+        expires_in: parseInt(expiresIn || '3600'),
+        token_type: 'bearer'
+      }
+      
+      // Set session temporarily to make authenticated request
+      setSession(sessionData)
+      
+      // Get user profile with the access token
+      const response = await axios.get('/auth/profile', {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        }
+      })
+      
+      const userData: User = {
+        id: response.data.id,
+        email: response.data.email,
+        created_at: response.data.created_at,
+        updated_at: response.data.updated_at
+      }
+      
+      // Set user and session
+      setUser(userData)
+      setSession(sessionData)
+      setEmailConfirmationRequired(false)
+      
+      // Store in localStorage
+      localStorage.setItem('auth_session', JSON.stringify(sessionData))
+      localStorage.setItem('auth_user', JSON.stringify(userData))
+      
+      toast.success('Email confirmed! Welcome to VibeBoost!')
+    } catch (error) {
+      console.error('Email callback error:', error)
+      toast.error('Failed to confirm email. Please try logging in manually.')
+      throw error
     }
-    
-    setLoading(false)
+  }
+
+  // Load stored auth data on mount and check for email confirmation tokens
+  useEffect(() => {
+    const checkForEmailConfirmation = async () => {
+      // Skip token processing if we're on the callback route (EmailCallback component handles it)
+      if (window.location.pathname === '/auth/callback') {
+        setLoading(false)
+        return
+      }
+      
+      // Check if URL contains email confirmation tokens
+      const urlFragment = window.location.hash
+      
+      if (urlFragment && urlFragment.includes('access_token')) {
+        try {
+          console.log('Email confirmation tokens detected:', urlFragment)
+          await handleEmailCallback(urlFragment)
+          
+          // Clean up URL
+          window.history.replaceState({}, document.title, window.location.pathname)
+          
+          setLoading(false)
+          return
+        } catch (error) {
+          console.error('Email confirmation failed:', error)
+          // Continue with normal auth check
+        }
+      }
+      
+      // Normal auth check - load stored data
+      const storedSession = localStorage.getItem('auth_session')
+      const storedUser = localStorage.getItem('auth_user')
+      
+      if (storedSession && storedUser) {
+        try {
+          const sessionData = JSON.parse(storedSession)
+          const userData = JSON.parse(storedUser)
+          
+          setSession(sessionData)
+          setUser(userData)
+        } catch (error) {
+          console.error('Failed to parse stored auth data:', error)
+          localStorage.removeItem('auth_session')
+          localStorage.removeItem('auth_user')
+        }
+      }
+      
+      setLoading(false)
+    }
+
+    checkForEmailConfirmation()
   }, [])
 
   const login = async (email: string, password: string): Promise<void> => {
@@ -140,20 +236,35 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }
 
-  const signup = async (email: string, password: string): Promise<void> => {
+  const signup = async (email: string, password: string): Promise<{ requiresEmailConfirmation: boolean }> => {
     try {
       const response = await axios.post('/auth/signup', { email, password })
-      const { user: userData, session: sessionData } = response.data
       
-      setUser(userData)
-      setSession(sessionData)
+      // Check if we got a full auth response (immediate signup)
+      if (response.data.user && response.data.session) {
+        const { user: userData, session: sessionData } = response.data
+        
+        setUser(userData)
+        setSession(sessionData)
+        setEmailConfirmationRequired(false)
+        
+        // Store in localStorage
+        localStorage.setItem('auth_session', JSON.stringify(sessionData))
+        localStorage.setItem('auth_user', JSON.stringify(userData))
+        
+        toast.success('Account created successfully!')
+        return { requiresEmailConfirmation: false }
+      } 
+      // Check if we got a message response (email confirmation required)
+      else if (response.data.message) {
+        setEmailConfirmationRequired(true)
+        toast.success('Please check your email to confirm your account!')
+        return { requiresEmailConfirmation: true }
+      }
       
-      // Store in localStorage
-      localStorage.setItem('auth_session', JSON.stringify(sessionData))
-      localStorage.setItem('auth_user', JSON.stringify(userData))
-      
-      toast.success('Account created successfully!')
+      throw new Error('Unexpected response format')
     } catch (error) {
+      setEmailConfirmationRequired(false)
       if (axios.isAxiosError(error)) {
         const errorMessage = error.response?.data?.detail || 'Signup failed'
         toast.error(errorMessage)
@@ -168,6 +279,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     // Clear auth state
     setUser(null)
     setSession(null)
+    setEmailConfirmationRequired(false)
     
     // Clear localStorage
     localStorage.removeItem('auth_session')
@@ -187,9 +299,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     user,
     session,
     loading,
+    emailConfirmationRequired,
     login,
     signup,
     logout,
+    handleEmailCallback,
     isAuthenticated: !!user && !!session
   }
 

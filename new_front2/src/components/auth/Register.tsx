@@ -2,7 +2,7 @@ import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { Loader2, Mail, Lock, User } from "lucide-react"
+import { Loader2, Mail, Lock, User, CheckCircle, ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -26,7 +26,9 @@ interface RegisterProps {
 
 export function Register({ onSwitchToLogin }: RegisterProps) {
   const [isLoading, setIsLoading] = useState(false)
-  const { signup } = useAuth()
+  const [showEmailConfirmation, setShowEmailConfirmation] = useState(false)
+  const [registeredEmail, setRegisteredEmail] = useState("")
+  const { signup, emailConfirmationRequired } = useAuth()
 
   const form = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
@@ -40,12 +42,71 @@ export function Register({ onSwitchToLogin }: RegisterProps) {
   const onSubmit = async (data: RegisterFormData) => {
     setIsLoading(true)
     try {
-      await signup(data.email, data.password)
+      const result = await signup(data.email, data.password)
+      if (result.requiresEmailConfirmation) {
+        setRegisteredEmail(data.email)
+        setShowEmailConfirmation(true)
+      }
+      // If no email confirmation required, user is automatically logged in
     } catch (error) {
       // Error is handled by the context and toast is shown
     } finally {
       setIsLoading(false)
     }
+  }
+
+  // Show email confirmation screen
+  if (showEmailConfirmation) {
+    return (
+      <Card className="w-full max-w-md mx-auto">
+        <CardHeader className="space-y-1">
+          <div className="flex items-center justify-center mb-4">
+            <CheckCircle className="h-16 w-16 text-green-500" />
+          </div>
+          <CardTitle className="text-2xl font-bold text-center">Check your email</CardTitle>
+          <CardDescription className="text-center">
+            We've sent a confirmation link to <strong>{registeredEmail}</strong>
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-start space-x-3">
+              <Mail className="h-5 w-5 text-blue-500 mt-0.5" />
+              <div className="text-sm text-blue-700">
+                <p className="font-medium mb-1">Next steps:</p>
+                <ol className="list-decimal list-inside space-y-1">
+                  <li>Check your email inbox</li>
+                  <li>Click the confirmation link</li>
+                  <li>You'll be automatically logged in</li>
+                </ol>
+              </div>
+            </div>
+          </div>
+          
+          <div className="text-center text-sm text-gray-600">
+            Didn't receive the email? Check your spam folder or{" "}
+            <button 
+              onClick={() => {
+                setShowEmailConfirmation(false)
+                form.reset()
+              }}
+              className="text-primary hover:underline font-medium"
+            >
+              try again
+            </button>
+          </div>
+
+          <Button 
+            variant="outline" 
+            onClick={onSwitchToLogin}
+            className="w-full"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Sign In
+          </Button>
+        </CardContent>
+      </Card>
+    )
   }
 
   return (

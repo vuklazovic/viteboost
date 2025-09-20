@@ -26,7 +26,10 @@ class AuthService:
         try:
             response = supabase.auth.sign_up({
                 "email": email,
-                "password": password
+                "password": password,
+                "options": {
+                    "email_redirect_to": "http://localhost:8080/auth/callback"
+                }
             })
             
             if response.user:
