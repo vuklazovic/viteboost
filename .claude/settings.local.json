@@ -6,7 +6,9 @@
       "Bash(\"C:\\Users\\vukla\\miniconda3\\envs\\vibeboost\\python.exe\" test_gemini.py)",
       "Bash(\"C:\\Users\\vukla\\miniconda3\\envs\\vibeboost\\python.exe\" main.py)",
       "Bash(python:*)",
-      "Bash(npm run dev:*)"
+      "Bash(npm run dev:*)",
+      "Bash(rm:*)",
+      "Bash(mv:*)"
     ],
     "deny": [],
     "ask": []
