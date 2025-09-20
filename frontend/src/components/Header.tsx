@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Zap, LogOut, User } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -11,12 +11,24 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAuthModal } from "@/hooks/useAuthModal";
+import { AuthModal } from "@/components/auth/AuthModal";
 
 const Header = () => {
   const { user, logout, isAuthenticated } = useAuth();
+  const authModal = useAuthModal();
+  const navigate = useNavigate();
 
   const getInitials = (email: string) => {
     return email.substring(0, 2).toUpperCase();
+  };
+
+  const handleGenerateClick = () => {
+    if (isAuthenticated) {
+      navigate('/generate');
+    } else {
+      authModal.openLogin();
+    }
   };
 
   return (
@@ -30,15 +42,12 @@ const Header = () => {
         </Link>
         
         <nav className="hidden md:flex items-center gap-8">
-          {isAuthenticated ? (
-            <Link to="/generate" className="text-muted-foreground hover:text-foreground transition-colors">
-              Generate
-            </Link>
-          ) : (
-            <Link to="/auth" className="text-muted-foreground hover:text-foreground transition-colors">
-              Generate
-            </Link>
-          )}
+          <button 
+            onClick={handleGenerateClick}
+            className="text-muted-foreground hover:text-foreground transition-colors"
+          >
+            Generate
+          </button>
           <a href="#features" className="text-muted-foreground hover:text-foreground transition-colors">
             Features
           </a>
@@ -80,16 +89,30 @@ const Header = () => {
             </DropdownMenu>
           ) : (
             <>
-              <Button variant="ghost" className="hidden md:inline-flex" asChild>
-                <Link to="/auth">Sign In</Link>
+              <Button 
+                variant="ghost" 
+                className="hidden md:inline-flex"
+                onClick={() => authModal.openLogin()}
+              >
+                Sign In
               </Button>
-              <Button variant="hero" size="sm" asChild>
-                <Link to="/auth">Try Free</Link>
+              <Button 
+                variant="hero" 
+                size="sm"
+                onClick={() => authModal.openLogin()}
+              >
+                Try Free
               </Button>
             </>
           )}
         </div>
       </div>
+      
+      <AuthModal
+        isOpen={authModal.isOpen}
+        onClose={authModal.closeModal}
+        defaultTab={authModal.defaultTab}
+      />
     </header>
   );
 };

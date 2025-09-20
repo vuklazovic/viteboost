@@ -1,5 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAuthModal } from "@/hooks/useAuthModal";
+import { AuthModal } from "@/components/auth/AuthModal";
 import Header from "@/components/Header";
 import HeroSection from "@/components/HeroSection";
 import ShowcaseSection from "@/components/ShowcaseSection";
@@ -13,12 +15,13 @@ import { ArrowRight, Sparkles } from "lucide-react";
 const Landing = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
+  const authModal = useAuthModal();
 
   const handleTryNow = () => {
     if (isAuthenticated) {
       navigate("/generate");
     } else {
-      navigate("/auth");
+      authModal.openLogin();
     }
   };
 
@@ -26,7 +29,7 @@ const Landing = () => {
     if (isAuthenticated) {
       navigate("/generate");
     } else {
-      navigate("/auth");
+      authModal.openLogin();
     }
   };
 
@@ -75,6 +78,12 @@ const Landing = () => {
         </section>
       </main>
       <Footer />
+      
+      <AuthModal
+        isOpen={authModal.isOpen}
+        onClose={authModal.closeModal}
+        defaultTab={authModal.defaultTab}
+      />
     </div>
   );
 };

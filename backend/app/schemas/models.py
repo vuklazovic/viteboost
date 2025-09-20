@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr, field_validator
-from typing import Optional, Dict, Any, Union
+from typing import Optional, Dict, Any, Union, List
 from datetime import datetime
 
 class UserSignUp(BaseModel):
@@ -56,3 +56,14 @@ class UserProfile(BaseModel):
         if isinstance(v, datetime):
             return v.isoformat()
         return v
+
+class EmailCheckResponse(BaseModel):
+    exists: bool
+    user_id: Optional[str] = None
+    email: Optional[str] = None
+    email_confirmed: Optional[bool] = None
+    providers: Optional[List[str]] = None
+    is_google_user: Optional[bool] = None
+    is_email_user: Optional[bool] = None
+    created_at: Optional[str] = None
+    suggested_action: Optional[str] = None

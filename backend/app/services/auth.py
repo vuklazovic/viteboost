@@ -13,6 +13,45 @@ security = HTTPBearer()
 
 class AuthService:
     @staticmethod
+    def check_email_exists(email: str) -> Dict[str, Any]:
+        """Check if email already exists and return user info if found"""
+        try:
+            # Simplified approach: try to sign in with a dummy password to check if user exists
+            # Supabase will give different error messages for "user not found" vs "wrong password"
+            try:
+                supabase.auth.sign_in_with_password({
+                    "email": email,
+                    "password": "dummy_password_for_check_12345"
+                })
+                # If this succeeds (very unlikely), user exists
+                return {
+                    "exists": True, 
+                    "is_email_user": True,
+                    "is_google_user": False,
+                    "check_successful": True
+                }
+            except Exception as e:
+                error_msg = str(e).lower()
+                if "invalid login credentials" in error_msg or "wrong password" in error_msg or "invalid password" in error_msg:
+                    # User exists but password is wrong
+                    return {
+                        "exists": True, 
+                        "is_email_user": True,
+                        "is_google_user": False,
+                        "check_successful": True
+                    }
+                elif "user not found" in error_msg or "no user found" in error_msg or "signup required" in error_msg:
+                    # User doesn't exist
+                    return {"exists": False, "check_successful": True}
+                else:
+                    # Some other error
+                    return {"exists": False, "check_successful": False, "error": str(e)}
+                
+        except Exception as e:
+            # Major error - return check failed
+            return {"exists": False, "check_successful": False, "error": str(e)}
+    
+    @staticmethod
     def create_user(email: str, password: str) -> Dict[str, Any]:
         try:
             response = supabase.auth.sign_up({
@@ -47,7 +86,7 @@ class AuthService:
                 "password": password
             })
             
-            if response.user:
+            if response.user and response.session:
                 return {
                     "user": response.user,
                     "session": response.session
@@ -57,11 +96,28 @@ class AuthService:
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Invalid credentials"
                 )
+        except HTTPException:
+            # Re-raise HTTP exceptions as-is
+            raise
         except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=f"Login failed: {str(e)}"
-            )
+            # Handle Supabase-specific errors
+            error_message = str(e).lower()
+            
+            if "invalid login credentials" in error_message or "invalid email or password" in error_message:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid email or password"
+                )
+            elif "email not confirmed" in error_message:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Please check your email to confirm your account before signing in"
+                )
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Authentication service error"
+                )
     
     @staticmethod
     def sign_out(access_token: str) -> bool:

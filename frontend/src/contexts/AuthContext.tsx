@@ -16,6 +16,18 @@ interface Session {
   token_type: string
 }
 
+interface EmailCheckResult {
+  exists: boolean
+  user_id?: string
+  email?: string
+  email_confirmed?: boolean
+  providers?: string[]
+  is_google_user?: boolean
+  is_email_user?: boolean
+  created_at?: string
+  suggested_action?: 'google_login' | 'email_login' | 'choose_method' | 'signup' | 'try_again'
+}
+
 interface AuthContextType {
   user: User | null
   session: Session | null
@@ -23,8 +35,10 @@ interface AuthContextType {
   emailConfirmationRequired: boolean
   login: (email: string, password: string) => Promise<void>
   signup: (email: string, password: string) => Promise<{ requiresEmailConfirmation: boolean }>
+  loginWithGoogle: () => Promise<void>
   logout: () => void
   handleEmailCallback: (urlFragment: string) => Promise<void>
+  checkEmailExists: (email: string) => Promise<EmailCheckResult>
   isAuthenticated: boolean
 }
 
@@ -223,16 +237,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // Store in localStorage
       localStorage.setItem('auth_session', JSON.stringify(sessionData))
       localStorage.setItem('auth_user', JSON.stringify(userData))
-      
-      toast.success('Welcome back!')
     } catch (error) {
-      if (axios.isAxiosError(error)) {
-        const errorMessage = error.response?.data?.detail || 'Login failed'
-        toast.error(errorMessage)
-        throw new Error(errorMessage)
-      }
-      toast.error('Login failed')
-      throw new Error('Login failed')
+      // Re-throw the original error so LoginForm can handle it
+      throw error
     }
   }
 
@@ -265,13 +272,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       throw new Error('Unexpected response format')
     } catch (error) {
       setEmailConfirmationRequired(false)
-      if (axios.isAxiosError(error)) {
-        const errorMessage = error.response?.data?.detail || 'Signup failed'
-        toast.error(errorMessage)
-        throw new Error(errorMessage)
-      }
-      toast.error('Signup failed')
-      throw new Error('Signup failed')
+      // Re-throw the original error so RegisterForm can handle it
+      throw error
     }
   }
 
@@ -295,6 +297,32 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     toast.success('Logged out successfully')
   }
 
+  const checkEmailExists = async (email: string): Promise<EmailCheckResult> => {
+    try {
+      const response = await axios.get(`/auth/check-email/${encodeURIComponent(email)}`)
+      return response.data
+    } catch (error) {
+      // If error occurs, assume email doesn't exist
+      return { exists: false, suggested_action: 'signup' }
+    }
+  }
+
+  const loginWithGoogle = async (): Promise<void> => {
+    try {
+      // Redirect to Supabase Google OAuth
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+      const redirectUrl = `${window.location.origin}/auth/callback`
+      
+      const googleAuthUrl = `${supabaseUrl}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUrl)}`
+      
+      // Redirect to Google OAuth
+      window.location.href = googleAuthUrl
+    } catch (error) {
+      toast.error('Google login failed')
+      throw new Error('Google login failed')
+    }
+  }
+
   const value: AuthContextType = {
     user,
     session,
@@ -302,8 +330,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     emailConfirmationRequired,
     login,
     signup,
+    loginWithGoogle,
     logout,
     handleEmailCallback,
+    checkEmailExists,
     isAuthenticated: !!user && !!session
   }
 

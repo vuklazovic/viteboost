@@ -29,7 +29,7 @@ class Settings:
     ALLOWED_EXTENSIONS: set = {".jpg", ".jpeg", ".png", ".webp"}
     
     # Frontend URL
-    FRONTEND_URL: str = "http://localhost:8080"
+    FRONTEND_URL: str = "http://localhost:8081"
     
     def __init__(self):
         if not all([self.SUPABASE_URL, self.SUPABASE_ANON_KEY]):

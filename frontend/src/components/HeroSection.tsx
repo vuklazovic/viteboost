@@ -2,6 +2,8 @@ import { Button } from "@/components/ui/button";
 import { Upload, Sparkles, Download } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAuthModal } from "@/hooks/useAuthModal";
+import { AuthModal } from "@/components/auth/AuthModal";
 import heroImage from "@/assets/hero-products.jpg";
 
 interface HeroSectionProps {
@@ -11,6 +13,7 @@ interface HeroSectionProps {
 const HeroSection = ({ onTryNow }: HeroSectionProps) => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
+  const authModal = useAuthModal();
 
   const handleStartCreating = () => {
     if (onTryNow) {
@@ -20,7 +23,7 @@ const HeroSection = ({ onTryNow }: HeroSectionProps) => {
       if (isAuthenticated) {
         navigate('/generate');
       } else {
-        navigate('/auth');
+        authModal.openLogin();
       }
     }
   };
@@ -90,6 +93,15 @@ const HeroSection = ({ onTryNow }: HeroSectionProps) => {
           </div>
         </div>
       </div>
+      
+      {/* Only show modal if onTryNow is not provided (fallback behavior) */}
+      {!onTryNow && (
+        <AuthModal
+          isOpen={authModal.isOpen}
+          onClose={authModal.closeModal}
+          defaultTab={authModal.defaultTab}
+        />
+      )}
     </section>
   );
 };
