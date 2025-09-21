@@ -45,13 +45,16 @@ export const generateImages = async (fileId: string): Promise<GenerateResponse> 
     params: { file_id: fileId },
   });
 
-  // Transform URLs to be absolute
-  const API_BASE_URL = 'http://127.0.0.1:8000';
+  // Transform URLs to be absolute using configured base URL
+  // Prefer VITE_API_BASE_URL, then axios.defaults.baseURL; otherwise leave as-is
+  const configuredBase = (import.meta as any).env?.VITE_API_BASE_URL || axios.defaults.baseURL || '';
+  const API_BASE_URL = (configuredBase || '').replace(/\/$/, '');
+  const toAbsoluteUrl = (u: string) => (/^https?:\/\//i.test(u) ? u : (API_BASE_URL ? `${API_BASE_URL}${u}` : u));
   const transformedResponse = {
     ...response.data,
     generated_images: response.data.generated_images.map(img => ({
       ...img,
-      url: `${API_BASE_URL}${img.url}`
+      url: toAbsoluteUrl(img.url)
     }))
   };
 
