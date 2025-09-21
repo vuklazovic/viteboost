@@ -131,7 +131,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   // Define handleEmailCallback function first
   const handleEmailCallback = async (urlFragment: string): Promise<void> => {
     try {
-      console.log('Processing email callback with URL fragment:', urlFragment)
       
       // Parse URL fragment to extract tokens
       const params = new URLSearchParams(urlFragment.substring(1)) // Remove # from start
@@ -139,11 +138,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const refreshToken = params.get('refresh_token')
       const expiresIn = params.get('expires_in')
       
-      console.log('Extracted tokens:', { 
-        accessToken: accessToken ? 'present' : 'missing',
-        refreshToken: refreshToken ? 'present' : 'missing',
-        expiresIn 
-      })
+      // Do not log tokens or callback parameters
       
       if (!accessToken || !refreshToken) {
         throw new Error('Missing required tokens in callback URL')
