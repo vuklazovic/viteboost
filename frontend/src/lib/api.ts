@@ -20,6 +20,7 @@ export interface UploadResponse {
 export interface GenerateResponse {
   file_id: string;
   generated_images: GeneratedImage[];
+  credits?: number;
 }
 
 // API Functions
@@ -58,10 +59,13 @@ export const generateImages = async (fileId: string): Promise<GenerateResponse> 
 };
 
 // Combined function for full workflow
-export const uploadAndGenerateImages = async (file: File): Promise<GeneratedImage[]> => {
+export const uploadAndGenerateImages = async (file: File): Promise<{ images: GeneratedImage[], credits?: number }> => {
   const uploadResult = await uploadImage(file);
   const generateResult = await generateImages(uploadResult.file_id);
-  return generateResult.generated_images;
+  return {
+    images: generateResult.generated_images,
+    credits: generateResult.credits
+  };
 };
 
 // Download helper

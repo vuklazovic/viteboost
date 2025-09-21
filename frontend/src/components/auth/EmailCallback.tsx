@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useNavigate, useLocation } from "react-router-dom"
 import { CheckCircle, XCircle, Loader2 } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -11,8 +11,12 @@ export function EmailCallback() {
   const navigate = useNavigate()
   const location = useLocation()
   const { handleEmailCallback, isAuthenticated } = useAuth()
+  const processed = useRef(false)
 
   useEffect(() => {
+    const processedRef = processed.current
+    if (processedRef) return
+    processed.current = true
     const processEmailCallback = async () => {
       try {
         // Get the URL fragment (everything after #)
@@ -40,7 +44,8 @@ export function EmailCallback() {
     }
 
     processEmailCallback()
-  }, [location.hash, handleEmailCallback, navigate])
+  // Only re-run when the hash changes; avoid depending on function identity
+  }, [location.hash])
 
   // If already authenticated, redirect immediately
   useEffect(() => {

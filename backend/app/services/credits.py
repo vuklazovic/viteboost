@@ -59,36 +59,54 @@ class CreditManager:
             return 0
 
     def add_credits(self, user_id: str, amount: int) -> int:
-        current = self.get_credits(user_id)
-        new_val = int(current) + int(amount)
+        """Add credits to user account"""
         try:
             if not self.has_user(user_id):
-                self.ensure_user(user_id, new_val)
+                self.ensure_user(user_id, amount)
+                return amount
             else:
+                current = self.get_credits(user_id)
+                new_val = int(current) + int(amount)
                 self.client.table(TABLE).update({
                     "credits": new_val,
                     "updated_at": datetime.utcnow().isoformat(),
                 }).eq("user_id", user_id).execute()
-        except Exception:
-            pass
-        return new_val
+                return new_val
+        except Exception as e:
+            # For add credits, we can be more lenient and return current credits
+            return self.get_credits(user_id)
 
     def consume_credits(self, user_id: str, amount: int) -> int:
-        current = self.get_credits(user_id)
-        remaining = int(current) - int(amount)
-        if remaining < 0:
-            raise ValueError("Insufficient credits")
+        """Atomically consume credits with proper validation"""
         try:
+            # First ensure user exists
             if not self.has_user(user_id):
-                # If somehow missing, initialize with 0 then fail
                 self.ensure_user(user_id, 0)
-            self.client.table(TABLE).update({
-                "credits": remaining,
+            
+            # Use atomic update with condition to prevent race conditions
+            # First get current credits and check if sufficient
+            current_result = self.client.table(TABLE).select("credits").eq("user_id", user_id).single().execute()
+            current_credits = current_result.data["credits"] if current_result.data else 0
+            
+            if current_credits < amount:
+                raise ValueError("Insufficient credits")
+            
+            new_credits = current_credits - amount
+            result = self.client.table(TABLE).update({
+                "credits": new_credits,
                 "updated_at": datetime.utcnow().isoformat(),
-            }).eq("user_id", user_id).execute()
-        except Exception:
-            pass
-        return remaining
+            }).eq("user_id", user_id).eq("credits", current_credits).execute()
+            
+            # Check if the update was successful (no rows updated means insufficient credits)
+            if not result.data:
+                raise ValueError("Insufficient credits")
+            
+            return new_credits
+        except ValueError:
+            # Re-raise ValueError for insufficient credits
+            raise
+        except Exception as e:
+            raise ValueError(f"Credit operation failed: {str(e)}")
 
 
 credit_manager = CreditManager()

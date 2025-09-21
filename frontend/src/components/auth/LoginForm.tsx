@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Separator } from "@/components/ui/separator"
-import { AccountConflictAlert } from "./AccountConflictAlert"
 import { useAuth } from "@/contexts/AuthContext"
 import { toast } from "sonner"
 import { useNavigate } from "react-router-dom"
@@ -26,15 +25,10 @@ interface LoginFormProps {
   onSuccess?: () => void
 }
 
-interface ConflictInfo {
-  email: string
-  suggestedAction: 'google_login' | 'email_login' | 'choose_method' | 'signup' | 'try_again'
-}
 
 export function LoginForm({ onSwitchToRegister, onSwitchToForgotPassword, onSuccess }: LoginFormProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
-  const [conflictInfo, setConflictInfo] = useState<ConflictInfo | null>(null)
   const { login, loginWithGoogle } = useAuth()
   const navigate = useNavigate()
 
@@ -48,7 +42,6 @@ export function LoginForm({ onSwitchToRegister, onSwitchToForgotPassword, onSucc
 
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true)
-    setConflictInfo(null)
     
     try {
       await login(data.email, data.password)
@@ -56,36 +49,9 @@ export function LoginForm({ onSwitchToRegister, onSwitchToForgotPassword, onSucc
       onSuccess?.()
       navigate('/generate')
     } catch (error) {
-      try {
-        if (axios.isAxiosError(error) && error.response?.data?.detail) {
-          const detail = error.response.data.detail
-          
-          // Handle structured error responses
-          if (typeof detail === 'object' && detail.suggested_action) {
-            const validActions = ['google_login', 'email_login', 'choose_method', 'signup', 'try_again']
-            
-            if (validActions.includes(detail.suggested_action)) {
-              if (detail.suggested_action === 'try_again') {
-                toast.error(detail.message || "Invalid password. Please try again.")
-              } else {
-                setConflictInfo({
-                  email: data.email,
-                  suggestedAction: detail.suggested_action
-                })
-              }
-            } else {
-              toast.error("Invalid email or password")
-            }
-          } else if (typeof detail === 'string') {
-            toast.error(detail)
-          } else {
-            toast.error("Invalid email or password")
-          }
-        } else {
-          toast.error("Invalid email or password")
-        }
-      } catch (parseError) {
-        // Error parsing login response
+      if (axios.isAxiosError(error) && error.response?.data?.detail) {
+        toast.error(error.response.data.detail)
+      } else {
         toast.error("Login failed. Please try again.")
       }
     } finally {
@@ -106,16 +72,6 @@ export function LoginForm({ onSwitchToRegister, onSwitchToForgotPassword, onSucc
 
   return (
     <div className="space-y-4">
-      {conflictInfo && (
-        <AccountConflictAlert
-          email={conflictInfo.email}
-          suggestedAction={conflictInfo.suggestedAction}
-          onGoogleLogin={handleGoogleLogin}
-          onSwitchToLogin={() => setConflictInfo(null)}
-          onSwitchToRegister={onSwitchToRegister}
-        />
-      )}
-      
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <FormField

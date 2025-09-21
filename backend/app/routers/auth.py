@@ -14,48 +14,7 @@ router = APIRouter(prefix="/auth", tags=["authentication"])
 
 @router.post("/signup")
 async def signup(user_data: UserSignUp):
-    # Check if email already exists
-    email_check = AuthService.check_email_exists(user_data.email)
-    
-    # If email check failed, still attempt signup (let Supabase handle it)
-    if not email_check.get("check_successful", True):
-        # Email check failed for signup
-        pass
-    
-    if email_check.get("exists"):
-        # User already exists, check their current auth methods
-        if email_check.get("is_google_user") and not email_check.get("is_email_user"):
-            # Google-only user wants to add email/password - this should be allowed
-            # But first suggest they could use Google login
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail={
-                    "message": "Account already exists with Google sign-in. You can sign in with Google or add email authentication.",
-                    "suggested_action": "choose_method",
-                    "email": user_data.email
-                }
-            )
-        elif email_check.get("is_email_user"):
-            # User already has email/password auth
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail={
-                    "message": "Account already exists with this email",
-                    "suggested_action": "email_login",
-                    "email": user_data.email
-                }
-            )
-        else:
-            # User exists but no clear auth method detected - safer to suggest login
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail={
-                    "message": "Account already exists with this email",
-                    "suggested_action": "email_login",
-                    "email": user_data.email
-                }
-            )
-    
+    # Simple approach: let Supabase handle duplicate email detection
     result = AuthService.create_user(user_data.email, user_data.password)
     
     # Check if session exists (email confirmation might be required)
@@ -98,76 +57,8 @@ async def signup(user_data: UserSignUp):
 
 @router.post("/login", response_model=AuthResponse)
 async def login(user_data: UserSignIn):
-    # Check if user exists and their signup method
-    email_check = AuthService.check_email_exists(user_data.email)
-    
-    # If email check failed (service error), still attempt login but prepare for generic error
-    if not email_check.get("check_successful", True):
-        # Email check failed for login
-        pass
-    
-    # Handle Google-only users
-    if email_check.get("exists") and email_check.get("is_google_user") and not email_check.get("is_email_user"):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={
-                "message": "This account uses Google sign-in. Please continue with Google.",
-                "suggested_action": "google_login",
-                "email": user_data.email
-            }
-        )
-    
-    # Attempt authentication
-    try:
-        result = AuthService.sign_in(user_data.email, user_data.password)
-    except HTTPException as http_exc:
-        # If email check was successful, we can give specific error messages
-        if email_check.get("check_successful", False):
-            if email_check.get("exists"):
-                # User exists but wrong password
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail={
-                        "message": "Invalid password",
-                        "suggested_action": "try_again",
-                        "email": user_data.email
-                    }
-                )
-            else:
-                # User doesn't exist
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail={
-                        "message": "No account found with this email",
-                        "suggested_action": "signup",
-                        "email": user_data.email
-                    }
-                )
-        else:
-            # Email check failed, give generic error based on Supabase response
-            error_message = str(http_exc.detail).lower() if hasattr(http_exc, 'detail') else ""
-            if "invalid login credentials" in error_message or "invalid email or password" in error_message:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail={
-                        "message": "Invalid email or password",
-                        "suggested_action": "try_again",
-                        "email": user_data.email
-                    }
-                )
-            else:
-                # Re-raise original exception
-                raise http_exc
-    except Exception as e:
-        # Handle other unexpected errors
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail={
-                "message": "Login failed due to server error",
-                "suggested_action": "try_again",
-                "email": user_data.email
-            }
-        )
+    # Simple approach: let Supabase handle authentication
+    result = AuthService.sign_in(user_data.email, user_data.password)
     
     user_response = UserResponse(
         id=result["user"].id,
@@ -230,22 +121,8 @@ async def get_profile(current_user: Dict[str, Any] = Depends(get_current_user)):
 
 @router.get("/check-email/{email}", response_model=EmailCheckResponse)
 async def check_email(email: str):
-    """Check if email already exists and return provider information"""
+    """Check if email already exists"""
     result = AuthService.check_email_exists(email)
-    
-    if result["exists"]:
-        # Add suggested action based on user's signup method
-        if result["is_google_user"] and not result["is_email_user"]:
-            suggested_action = "google_login"
-        elif result["is_email_user"] and not result["is_google_user"]:
-            suggested_action = "email_login"
-        elif result["is_google_user"] and result["is_email_user"]:
-            suggested_action = "choose_method"
-        else:
-            suggested_action = "contact_support"
-            
-        result["suggested_action"] = suggested_action
-    
     return EmailCheckResponse(**result)
 
 @router.post("/forgot-password", response_model=PasswordResetResponse)

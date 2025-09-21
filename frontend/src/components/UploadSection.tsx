@@ -19,7 +19,7 @@ const UploadSection = ({ onImagesGenerated }: UploadSectionProps) => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
   const [fileError, setFileError] = useState<string | null>(null);
-  const { refreshCredits, costPerImage, numImages, adjustCredits, credits } = useAuth();
+  const { refreshCredits, refreshCreditsImmediate, updateCredits, costPerImage, numImages, credits } = useAuth();
 
   // Generate images mutation
   const generateImagesMutation = useMutation({
@@ -27,9 +27,6 @@ const UploadSection = ({ onImagesGenerated }: UploadSectionProps) => {
     onMutate: () => {
       setProgress(0);
       toast.info('🚀 Starting AI image generation...');
-      // Optimistically deduct credits immediately
-      const cost = (costPerImage || 1) * (numImages || 1);
-      if (cost > 0) adjustCredits(-cost);
       
       // Simulate progress
       const interval = setInterval(() => {
@@ -42,15 +39,23 @@ const UploadSection = ({ onImagesGenerated }: UploadSectionProps) => {
         });
       }, 500);
       
-      return { interval, cost } as { interval: any; cost: number };
+      return { interval };
     },
-    onSuccess: (images, _, context) => {
+    onSuccess: (result, _, context) => {
       if (context?.interval) {
         clearInterval(context.interval);
       }
       setProgress(100);
-      toast.success(`✨ Generated ${images.length} stunning variations!`);
-      onImagesGenerated?.(images);
+      toast.success(`✨ Generated ${result.images.length} stunning variations!`);
+      onImagesGenerated?.(result.images);
+      
+      // Update credits directly from response if available
+      if (typeof result.credits === 'number') {
+        updateCredits(result.credits);
+      } else {
+        // Fallback to refreshing credits if not in response
+        refreshCredits();
+      }
       
       // Scroll to results
       setTimeout(() => {
@@ -59,20 +64,32 @@ const UploadSection = ({ onImagesGenerated }: UploadSectionProps) => {
           resultsSection.scrollIntoView({ behavior: 'smooth' });
         }
       }, 500);
-      // Refresh credits after a successful generation
-      refreshCredits();
     },
-    onError: (error, _, context) => {
+    onError: (error, variables, context) => {
       if (context?.interval) {
         clearInterval(context.interval);
       }
       setProgress(0);
       console.error('Generation failed:', error);
-      toast.error('❌ Generation failed. Please check your backend connection.');
-      // Refund optimistic deduction
-      if (context && typeof context.cost === 'number' && context.cost > 0) {
-        adjustCredits(context.cost);
+      
+      // Restore credits on failure (add back what we deducted)
+      const cost = (costPerImage || 1) * (numImages || 1);
+      const restoredCredits = (credits ?? 0) + cost;
+      updateCredits(restoredCredits);
+      
+      // Handle specific error types
+      if (error.response?.status === 402) {
+        toast.error('❌ Insufficient credits. Please refresh and try again.');
+      } else if (error.response?.status === 400) {
+        toast.error('❌ Invalid request. Please check your image and try again.');
+      } else if (error.code === 'ERR_NETWORK' || error.code === 'ERR_CONNECTION_REFUSED') {
+        toast.error('❌ Cannot connect to server. Please check your connection.');
+      } else {
+        toast.error('❌ Generation failed. Please try again.');
       }
+      
+      // Refresh credits immediately to get accurate count after error
+      refreshCreditsImmediate();
     }
   });
 
@@ -146,9 +163,14 @@ const UploadSection = ({ onImagesGenerated }: UploadSectionProps) => {
     }
     const cost = (costPerImage || 1) * (numImages || 1);
     if ((credits ?? 0) < cost) {
-      toast.error(`Not enough credits. Need ${cost}, you have ${credits}.`);
+      toast.error(`Not enough credits. Need ${cost}, you have ${credits}. Please purchase more credits or wait for them to refresh.`);
       return;
     }
+    
+    // Instantly deduct credits for immediate UI feedback
+    const newCredits = (credits ?? 0) - cost;
+    updateCredits(newCredits);
+    
     console.log('Starting image generation...');
     generateImagesMutation.mutate(uploadedFile);
   };

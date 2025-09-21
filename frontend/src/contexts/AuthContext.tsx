@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import React, { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react'
 import axios from 'axios'
 import { toast } from 'sonner'
 
@@ -16,17 +16,6 @@ interface Session {
   token_type: string
 }
 
-interface EmailCheckResult {
-  exists: boolean
-  user_id?: string
-  email?: string
-  email_confirmed?: boolean
-  providers?: string[]
-  is_google_user?: boolean
-  is_email_user?: boolean
-  created_at?: string
-  suggested_action?: 'google_login' | 'email_login' | 'choose_method' | 'signup' | 'try_again'
-}
 
 interface AuthContextType {
   user: User | null
@@ -36,14 +25,15 @@ interface AuthContextType {
   credits: number
   costPerImage: number
   numImages: number
+  creditsLoading: boolean
   refreshCredits: () => Promise<void>
-  adjustCredits: (delta: number) => void
+  refreshCreditsImmediate: () => Promise<void>
+  updateCredits: (newCredits: number) => void
   login: (email: string, password: string) => Promise<void>
   signup: (email: string, password: string) => Promise<{ requiresEmailConfirmation: boolean }>
   loginWithGoogle: () => Promise<void>
   logout: () => void
   handleEmailCallback: (urlFragment: string) => Promise<void>
-  checkEmailExists: (email: string) => Promise<EmailCheckResult>
   requestPasswordReset: (email: string) => Promise<{ success: boolean; error?: string }>
   resetPassword: (accessToken: string, newPassword: string) => Promise<void>
   isAuthenticated: boolean
@@ -56,6 +46,9 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000
 // Configure axios defaults
 axios.defaults.baseURL = API_BASE_URL
 
+// Separate axios instance without interceptors for refresh calls
+const refreshClient = axios.create({ baseURL: API_BASE_URL })
+
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
@@ -64,6 +57,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [credits, setCredits] = useState<number>(0)
   const [costPerImage, setCostPerImage] = useState<number>(1)
   const [numImages, setNumImages] = useState<number>(3)
+  const [creditsLoading, setCreditsLoading] = useState<boolean>(false)
+  
+  // Track if credits have been fetched to prevent infinite loops
+  const creditsFetched = useRef(false)
+  const isRefreshingCredits = useRef(false)
+  const oauthCallbackProcessed = useRef(false)
+  const retryCount = useRef(0)
+  const refreshCreditsTimeout = useRef<NodeJS.Timeout | null>(null)
 
   // Set up axios interceptor for auth token
   useEffect(() => {
@@ -78,20 +79,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     )
 
     return () => axios.interceptors.request.eject(interceptor)
-  }, [session])
+  }, [session?.access_token])
 
   // Set up response interceptor for token refresh
   useEffect(() => {
     const interceptor = axios.interceptors.response.use(
       (response) => response,
       async (error) => {
-        const originalRequest = error.config
+        const originalRequest = error.config || {}
+        const requestUrl: string = originalRequest.url || ''
         
+        // Avoid attempting to refresh when the refresh endpoint itself 401s
+        if (requestUrl.includes('/auth/refresh')) {
+          return Promise.reject(error)
+        }
+
         if (error.response?.status === 401 && !originalRequest._retry && session?.refresh_token) {
           originalRequest._retry = true
           
           try {
-            const response = await axios.post('/auth/refresh', {
+            // Use a clean client to avoid interceptor recursion
+            const response = await refreshClient.post('/auth/refresh', {
               refresh_token: session.refresh_token
             })
             
@@ -119,7 +127,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     )
 
     return () => axios.interceptors.response.eject(interceptor)
-  }, [session])
+  }, [session?.refresh_token])
 
   // Define handleEmailCallback function first
   const handleEmailCallback = async (urlFragment: string): Promise<void> => {
@@ -171,8 +179,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUser(userData)
       setSession(sessionData)
       setEmailConfirmationRequired(false)
-      // Fetch credits after confirming email
-      await refreshCredits()
+      
+      // Mark credits as fetched since we'll fetch them immediately
+      creditsFetched.current = true
+      
+      // Fetch credits immediately for OAuth users
+      await refreshCreditsImmediate()
       
       // Store in localStorage
       localStorage.setItem('auth_session', JSON.stringify(sessionData))
@@ -198,9 +210,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // Check if URL contains email confirmation tokens
       const urlFragment = window.location.hash
       
-      if (urlFragment && urlFragment.includes('access_token')) {
+      if (urlFragment && urlFragment.includes('access_token') && !oauthCallbackProcessed.current && retryCount.current < 3) {
         try {
           console.log('Email confirmation tokens detected:', urlFragment)
+          retryCount.current += 1
+          oauthCallbackProcessed.current = true
           await handleEmailCallback(urlFragment)
           
           // Clean up URL
@@ -210,7 +224,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           return
         } catch (error) {
           console.error('Email confirmation failed:', error)
-          // Continue with normal auth check
+          
+          // For network errors, don't reset the flag to prevent infinite retries
+          const errorCode = error?.code || error?.response?.status
+          if (errorCode === 'ERR_NETWORK' || errorCode === 'ERR_CONNECTION_REFUSED' || !navigator.onLine) {
+            toast.error('Cannot connect to server. Please check your connection and try again.')
+            // Keep oauthCallbackProcessed.current = true to prevent retries
+          } else {
+            oauthCallbackProcessed.current = false // Reset on other errors only
+          }
+          
+          // Clean up URL even on error
+          window.history.replaceState({}, document.title, window.location.pathname)
+          setLoading(false)
+          return
         }
       }
       
@@ -225,6 +252,21 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           
           setSession(sessionData)
           setUser(userData)
+          
+          // Try to restore credits from localStorage
+          const storedCredits = localStorage.getItem('auth_credits')
+          if (storedCredits) {
+            try {
+              const creditsData = JSON.parse(storedCredits)
+              setCredits(creditsData.credits || 0)
+              setCostPerImage(creditsData.costPerImage || 1)
+              setNumImages(creditsData.numImages || 3)
+              creditsFetched.current = true
+            } catch (error) {
+              console.error('Failed to parse stored credits:', error)
+              localStorage.removeItem('auth_credits')
+            }
+          }
         } catch (error) {
           console.error('Failed to parse stored auth data:', error)
           localStorage.removeItem('auth_session')
@@ -238,12 +280,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     checkForEmailConfirmation()
   }, [])
 
-  // Fetch credits whenever we have a valid session and user
+  // Fetch credits when user is authenticated and credits haven't been fetched yet
   useEffect(() => {
-    if (user && session?.access_token) {
-      refreshCredits()
+    if (user?.id && session?.access_token && !creditsFetched.current) {
+      creditsFetched.current = true
+      refreshCreditsImmediate()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id, session?.access_token])
 
   const login = async (email: string, password: string): Promise<void> => {
@@ -257,8 +299,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // Store in localStorage
       localStorage.setItem('auth_session', JSON.stringify(sessionData))
       localStorage.setItem('auth_user', JSON.stringify(userData))
-      // Fetch credits after login
-      await refreshCredits()
     } catch (error) {
       // Re-throw the original error so LoginForm can handle it
       throw error
@@ -282,7 +322,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         localStorage.setItem('auth_user', JSON.stringify(userData))
         
         toast.success('Account created successfully!')
-        await refreshCredits()
         return { requiresEmailConfirmation: false }
       } 
       // Check if we got a message response (email confirmation required)
@@ -306,9 +345,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setSession(null)
     setEmailConfirmationRequired(false)
     
+    // Reset tracking flags
+    creditsFetched.current = false
+    isRefreshingCredits.current = false
+    oauthCallbackProcessed.current = false
+    retryCount.current = 0
+    
+    // Clear any pending credit refresh timeout
+    if (refreshCreditsTimeout.current) {
+      clearTimeout(refreshCreditsTimeout.current)
+      refreshCreditsTimeout.current = null
+    }
+    
     // Clear localStorage
     localStorage.removeItem('auth_session')
     localStorage.removeItem('auth_user')
+    localStorage.removeItem('auth_credits')
     
     // Optional: Call backend logout endpoint
     if (session?.access_token) {
@@ -321,29 +373,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setCredits(0)
   }
 
-  const checkEmailExists = async (email: string): Promise<EmailCheckResult> => {
-    try {
-      const response = await axios.get(`/auth/check-email/${encodeURIComponent(email)}`)
-      return response.data
-    } catch (error) {
-      // If error occurs, assume email doesn't exist
-      return { exists: false, suggested_action: 'signup' }
-    }
-  }
 
   const loginWithGoogle = async (): Promise<void> => {
     try {
-      // Redirect to Supabase Google OAuth
+      // Use proper Supabase OAuth URL format
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-      const redirectUrl = `${window.location.origin}/auth/callback`
+      if (!supabaseUrl) {
+        throw new Error('Supabase URL not configured')
+      }
       
+      const redirectUrl = `${window.location.origin}/auth/callback`
       const googleAuthUrl = `${supabaseUrl}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectUrl)}`
       
       // Redirect to Google OAuth
       window.location.href = googleAuthUrl
     } catch (error) {
       toast.error('Google login failed')
-      throw new Error('Google login failed')
+      throw error
     }
   }
 
@@ -382,20 +428,92 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }
 
-  const refreshCredits = async (): Promise<void> => {
+  const refreshCreditsCore = async (immediate: boolean = false): Promise<void> => {
     try {
-      if (!session?.access_token) return
+      if (!session?.access_token || creditsLoading) return
+      
+      setCreditsLoading(true)
+      isRefreshingCredits.current = true
+      
       const res = await axios.get('/auth/credits')
-      setCredits(res.data?.credits ?? 0)
-      if (typeof res.data?.cost_per_image === 'number') setCostPerImage(res.data.cost_per_image)
-      if (typeof res.data?.num_images === 'number') setNumImages(res.data.num_images)
+      const credits = res.data?.credits ?? 0
+      const costPerImage = res.data?.cost_per_image ?? 1
+      const numImages = res.data?.num_images ?? 3
+      
+      setCredits(credits)
+      setCostPerImage(costPerImage)
+      setNumImages(numImages)
+      
+      // Store credits in localStorage for persistence
+      localStorage.setItem('auth_credits', JSON.stringify({
+        credits,
+        costPerImage,
+        numImages
+      }))
     } catch (e) {
-      // Ignore silently; keep prior credits
+      // Handle errors with better user feedback
+      console.error('Failed to refresh credits:', e)
+      if (e.code === 'ERR_NETWORK' || e.code === 'ERR_CONNECTION_REFUSED') {
+        // Network error - don't show toast as it might be temporary
+        console.warn('Network error while refreshing credits, keeping cached values')
+      } else {
+        // Other errors - show toast but don't interrupt user flow
+        toast.error('Unable to refresh credits balance')
+      }
+    } finally {
+      setCreditsLoading(false)
+      isRefreshingCredits.current = false
     }
   }
 
-  const adjustCredits = (delta: number) => {
-    setCredits(prev => Math.max(0, prev + delta))
+  const refreshCredits = async (): Promise<void> => {
+    // Clear any existing timeout to debounce rapid calls
+    if (refreshCreditsTimeout.current) {
+      clearTimeout(refreshCreditsTimeout.current)
+    }
+    
+    // Debounce the actual refresh call
+    refreshCreditsTimeout.current = setTimeout(async () => {
+      await refreshCreditsCore(false)
+    }, 500) // 500ms debounce
+  }
+
+  const refreshCreditsImmediate = async (): Promise<void> => {
+    // Clear any existing timeout to prevent interference
+    if (refreshCreditsTimeout.current) {
+      clearTimeout(refreshCreditsTimeout.current)
+      refreshCreditsTimeout.current = null
+    }
+    
+    // Execute immediately without debouncing
+    await refreshCreditsCore(true)
+  }
+
+  const updateCredits = (newCredits: number) => {
+    // Validate the credits value
+    if (typeof newCredits !== 'number' || newCredits < 0 || !isFinite(newCredits)) {
+      console.error('Invalid credits value received:', newCredits)
+      toast.error('Received invalid credit balance from server')
+      return
+    }
+    
+    setCredits(newCredits)
+    // Update localStorage as well
+    const storedCredits = localStorage.getItem('auth_credits')
+    if (storedCredits) {
+      try {
+        const creditsData = JSON.parse(storedCredits)
+        creditsData.credits = newCredits
+        localStorage.setItem('auth_credits', JSON.stringify(creditsData))
+      } catch (error) {
+        // If parsing fails, create new credits data
+        localStorage.setItem('auth_credits', JSON.stringify({
+          credits: newCredits,
+          costPerImage,
+          numImages
+        }))
+      }
+    }
   }
 
   const value: AuthContextType = {
@@ -406,14 +524,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     credits,
     costPerImage,
     numImages,
+    creditsLoading,
     refreshCredits,
-    adjustCredits,
+    refreshCreditsImmediate,
+    updateCredits,
     login,
     signup,
     loginWithGoogle,
     logout,
     handleEmailCallback,
-    checkEmailExists,
     requestPasswordReset,
     resetPassword,
     isAuthenticated: !!user && !!session

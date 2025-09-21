@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { Separator } from "@/components/ui/separator"
-import { AccountConflictAlert } from "./AccountConflictAlert"
 import { useAuth } from "@/contexts/AuthContext"
 import { toast } from "sonner"
 import axios from "axios"
@@ -28,17 +27,12 @@ interface RegisterFormProps {
   onSuccess?: () => void
 }
 
-interface ConflictInfo {
-  email: string
-  suggestedAction: 'google_login' | 'email_login' | 'choose_method' | 'signup'
-}
 
 export function RegisterForm({ onSwitchToLogin, onSuccess }: RegisterFormProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
   const [showEmailConfirmation, setShowEmailConfirmation] = useState(false)
   const [registeredEmail, setRegisteredEmail] = useState("")
-  const [conflictInfo, setConflictInfo] = useState<ConflictInfo | null>(null)
   const { signup, loginWithGoogle } = useAuth()
 
   const form = useForm<RegisterFormData>({
@@ -52,7 +46,6 @@ export function RegisterForm({ onSwitchToLogin, onSuccess }: RegisterFormProps) 
 
   const onSubmit = async (data: RegisterFormData) => {
     setIsLoading(true)
-    setConflictInfo(null)
     
     try {
       const result = await signup(data.email, data.password)
@@ -66,32 +59,9 @@ export function RegisterForm({ onSwitchToLogin, onSuccess }: RegisterFormProps) 
         onSuccess?.()
       }
     } catch (error) {
-      try {
-        if (axios.isAxiosError(error) && error.response?.data?.detail) {
-          const detail = error.response.data.detail
-          
-          // Handle structured error responses
-          if (typeof detail === 'object' && detail.suggested_action) {
-            const validActions = ['google_login', 'email_login', 'choose_method', 'signup']
-            
-            if (validActions.includes(detail.suggested_action)) {
-              setConflictInfo({
-                email: data.email,
-                suggestedAction: detail.suggested_action
-              })
-            } else {
-              toast.error("An account with this email already exists.")
-            }
-          } else if (typeof detail === 'string') {
-            toast.error(detail)
-          } else {
-            toast.error("Registration failed. Please try again.")
-          }
-        } else {
-          toast.error("Registration failed. Please try again.")
-        }
-      } catch (parseError) {
-        // Error parsing registration response
+      if (axios.isAxiosError(error) && error.response?.data?.detail) {
+        toast.error(error.response.data.detail)
+      } else {
         toast.error("Registration failed. Please try again.")
       }
     } finally {
@@ -141,16 +111,6 @@ export function RegisterForm({ onSwitchToLogin, onSuccess }: RegisterFormProps) 
 
   return (
     <div className="space-y-4">
-      {conflictInfo && (
-        <AccountConflictAlert
-          email={conflictInfo.email}
-          suggestedAction={conflictInfo.suggestedAction}
-          onGoogleLogin={handleGoogleSignup}
-          onSwitchToLogin={onSwitchToLogin}
-          onSwitchToRegister={() => setConflictInfo(null)}
-        />
-      )}
-      
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <FormField

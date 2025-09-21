@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Zap, LogOut, User } from "lucide-react";
+import { Zap, LogOut, User, Loader2 } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -15,7 +15,7 @@ import { useAuthModal } from "@/hooks/useAuthModal";
 import { AuthModal } from "@/components/auth/AuthModal";
 
 const Header = () => {
-  const { user, logout, isAuthenticated, credits, refreshCredits } = useAuth();
+  const { user, logout, isAuthenticated, credits, creditsLoading } = useAuth();
   const authModal = useAuthModal();
   const navigate = useNavigate();
 
@@ -64,10 +64,13 @@ const Header = () => {
             <div
               className="hidden sm:flex items-center gap-2 rounded-full border border-border px-3 py-1 text-sm text-foreground"
               title="Your available credits"
-              onClick={() => refreshCredits()}
             >
-              <Zap className="h-4 w-4 text-primary" />
-              <span>{credits}</span>
+              {creditsLoading ? (
+                <Loader2 className="h-4 w-4 text-primary animate-spin" />
+              ) : (
+                <Zap className="h-4 w-4 text-primary" />
+              )}
+              <span>{creditsLoading ? '...' : credits}</span>
               <span className="text-muted-foreground">credits</span>
             </div>
           )}

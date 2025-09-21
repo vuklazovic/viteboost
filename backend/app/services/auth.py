@@ -1,4 +1,3 @@
-import jwt
 from supabase import create_client, Client
 from fastapi import HTTPException, Depends, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -14,42 +13,34 @@ security = HTTPBearer()
 class AuthService:
     @staticmethod
     def check_email_exists(email: str) -> Dict[str, Any]:
-        """Check if email already exists and return user info if found"""
+        """Check if email already exists using Supabase Admin API"""
         try:
-            # Simplified approach: try to sign in with a dummy password to check if user exists
-            # Supabase will give different error messages for "user not found" vs "wrong password"
-            try:
-                supabase.auth.sign_in_with_password({
-                    "email": email,
-                    "password": "dummy_password_for_check_12345"
-                })
-                # If this succeeds (very unlikely), user exists
-                return {
-                    "exists": True, 
-                    "is_email_user": True,
-                    "is_google_user": False,
-                    "check_successful": True
-                }
-            except Exception as e:
-                error_msg = str(e).lower()
-                if "invalid login credentials" in error_msg or "wrong password" in error_msg or "invalid password" in error_msg:
-                    # User exists but password is wrong
-                    return {
-                        "exists": True, 
-                        "is_email_user": True,
-                        "is_google_user": False,
-                        "check_successful": True
-                    }
-                elif "user not found" in error_msg or "no user found" in error_msg or "signup required" in error_msg:
-                    # User doesn't exist
-                    return {"exists": False, "check_successful": True}
-                else:
-                    # Some other error
-                    return {"exists": False, "check_successful": False, "error": str(e)}
-                
+            # Use Supabase Admin API to list users by email
+            response = supabase_admin.auth.admin.list_users()
+            
+            if response and hasattr(response, 'users'):
+                for user in response.users:
+                    if user.email == email:
+                        # Determine auth providers
+                        identities = getattr(user, 'identities', [])
+                        providers = [identity.provider for identity in identities] if identities else []
+                        
+                        return {
+                            "exists": True,
+                            "is_email_user": "email" in providers,
+                            "is_google_user": "google" in providers,
+                            "check_successful": True,
+                            "user_id": user.id,
+                            "email_confirmed": user.email_confirmed_at is not None,
+                            "providers": providers
+                        }
+            
+            # User not found
+            return {"exists": False, "check_successful": True}
+            
         except Exception as e:
-            # Major error - return check failed
-            return {"exists": False, "check_successful": False, "error": str(e)}
+            # Return check failed but don't expose error details for security
+            return {"exists": False, "check_successful": False}
     
     @staticmethod
     def create_user(email: str, password: str) -> Dict[str, Any]:
@@ -62,21 +53,22 @@ class AuthService:
                 }
             })
             
-            if response.user:
-                return {
-                    "user": response.user,
-                    "session": response.session
-                }
+            return {
+                "user": response.user,
+                "session": response.session
+            }
+        except Exception as e:
+            error_msg = str(e).lower()
+            if "already registered" in error_msg or "already exists" in error_msg:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="An account with this email already exists"
+                )
             else:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Failed to create user"
+                    detail="Registration failed"
                 )
-        except Exception as e:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Registration failed: {str(e)}"
-            )
     
     @staticmethod
     def sign_in(email: str, password: str) -> Dict[str, Any]:
@@ -86,21 +78,11 @@ class AuthService:
                 "password": password
             })
             
-            if response.user and response.session:
-                return {
-                    "user": response.user,
-                    "session": response.session
-                }
-            else:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Invalid credentials"
-                )
-        except HTTPException:
-            # Re-raise HTTP exceptions as-is
-            raise
+            return {
+                "user": response.user,
+                "session": response.session
+            }
         except Exception as e:
-            # Handle Supabase-specific errors
             error_message = str(e).lower()
             
             if "invalid login credentials" in error_message or "invalid email or password" in error_message:
@@ -111,67 +93,45 @@ class AuthService:
             elif "email not confirmed" in error_message:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Please check your email to confirm your account before signing in"
+                    detail="Please check your email to confirm your account"
                 )
             else:
                 raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="Authentication service error"
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Authentication failed"
                 )
     
     @staticmethod
     def sign_out(access_token: str) -> bool:
         try:
-            supabase.auth.set_session(access_token, None)
+            # Set the session and sign out
+            supabase.auth.set_session(access_token, "")
             supabase.auth.sign_out()
             return True
         except Exception:
-            return False
+            # Even if sign out fails on server, consider it successful on client
+            return True
     
     @staticmethod
     def refresh_session(refresh_token: str) -> Dict[str, Any]:
         try:
             response = supabase.auth.refresh_session(refresh_token)
-            if response.session:
-                return {
-                    "user": response.user,
-                    "session": response.session
-                }
-            else:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Failed to refresh session"
-                )
+            return {
+                "user": response.user,
+                "session": response.session
+            }
         except Exception as e:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=f"Token refresh failed: {str(e)}"
+                detail="Session refresh failed"
             )
 
     @staticmethod
     def request_password_reset(email: str) -> Dict[str, Any]:
-        """Request password reset email for existing email users"""
+        """Request password reset email"""
         try:
-            # First check if user exists and is an email user
-            email_check = AuthService.check_email_exists(email)
-            
-            if not email_check.get("exists"):
-                # For security, don't reveal if email exists or not
-                return {
-                    "message": "If this email is registered, you will receive a password reset link.",
-                    "success": True
-                }
-            
-            if email_check.get("is_google_user") and not email_check.get("is_email_user"):
-                # Google-only user cannot reset password
-                return {
-                    "message": "This account uses Google sign-in. Please sign in with Google.",
-                    "success": False,
-                    "error": "google_only_account"
-                }
-            
             # Send password reset email via Supabase
-            response = supabase.auth.reset_password_email(
+            supabase.auth.reset_password_email(
                 email,
                 {
                     "redirect_to": f"{settings.FRONTEND_URL}/reset-password"
@@ -184,7 +144,7 @@ class AuthService:
             }
             
         except Exception as e:
-            # Log error but return generic message for security
+            # Return generic message for security (don't reveal if email exists)
             return {
                 "message": "If this email is registered, you will receive a password reset link.",
                 "success": True
@@ -229,20 +189,26 @@ class AuthService:
 
 def verify_token(token: str) -> Dict[str, Any]:
     try:
-        payload = jwt.decode(
-            token, 
-            options={"verify_signature": False}
-        )
+        # Use Supabase to verify the JWT token properly
+        response = supabase.auth.get_user(token)
         
-        user_id = payload.get("sub")
-        if not user_id:
+        if not response.user:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token: missing user ID"
+                detail="Invalid token"
             )
         
-        return {"user_id": user_id, "payload": payload}
-    except jwt.InvalidTokenError:
+        return {
+            "user_id": response.user.id,
+            "payload": {
+                "sub": response.user.id,
+                "email": response.user.email,
+                "created_at": response.user.created_at,
+                "updated_at": response.user.updated_at,
+                "user_metadata": response.user.user_metadata
+            }
+        }
+    except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token"
