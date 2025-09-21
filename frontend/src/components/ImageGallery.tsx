@@ -98,26 +98,26 @@ const ImageGallery = ({ images }: ImageGalleryProps) => {
   }
 
   return (
-    <section className="py-24 bg-gradient-secondary" data-section="results">
+    <section className="py-16 bg-gradient-secondary" data-section="results">
       <div className="container mx-auto px-4">
         {/* Header */}
-        <div className="text-center mb-16">
-          <div className="inline-flex items-center gap-2 px-6 py-3 bg-primary/10 rounded-full text-sm font-medium text-primary mb-6">
+        <div className="text-center mb-12">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-full text-sm font-medium text-primary mb-4">
             <Sparkles className="h-4 w-4" />
             AI Generation Complete
           </div>
-          <h2 className="text-4xl lg:text-6xl font-bold text-foreground mb-6">
-            Your sales-boosting images are
-            <span className="bg-gradient-primary bg-clip-text text-transparent"> ready to rock! 🚀</span>
+          <h2 className="text-3xl lg:text-4xl font-bold text-foreground mb-4">
+            Your images are
+            <span className="bg-gradient-primary bg-clip-text text-transparent"> ready! 🚀</span>
           </h2>
-          <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-            {images.length} professional variations generated with AI precision. 
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+            {images.length} professional variations generated with AI precision.
             Each one designed to convert browsers into buyers.
           </p>
         </div>
 
         {/* Gallery Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 mb-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-12">
           {images.map((image, index) => {
             const styleInfo = getStyleInfo(image.style, index);
             return (
@@ -221,27 +221,27 @@ const ImageGallery = ({ images }: ImageGalleryProps) => {
         </div>
 
         {/* Success Stats */}
-        <div className="max-w-4xl mx-auto mb-16">
+        <div className="max-w-3xl mx-auto mb-12">
           <Card className="bg-gradient-primary text-white border-0 shadow-strong">
-            <div className="p-8 text-center">
-              <div className="flex items-center justify-center gap-3 mb-6">
-                <Star className="w-8 h-8 text-yellow-300" />
-                <h3 className="text-3xl font-bold">Success Metrics</h3>
-                <Star className="w-8 h-8 text-yellow-300" />
+            <div className="p-6 text-center">
+              <div className="flex items-center justify-center gap-2 mb-4">
+                <Star className="w-6 h-6 text-yellow-300" />
+                <h3 className="text-2xl font-bold">Success Metrics</h3>
+                <Star className="w-6 h-6 text-yellow-300" />
               </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="text-center">
-                  <div className="text-4xl font-bold mb-2">{images.length}</div>
-                  <div className="text-white/90">Professional Variations</div>
+                  <div className="text-3xl font-bold mb-1">{images.length}</div>
+                  <div className="text-white/90 text-sm">Professional Variations</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-4xl font-bold mb-2">~3x</div>
-                  <div className="text-white/90">Expected Conversion Boost</div>
+                  <div className="text-3xl font-bold mb-1">~3x</div>
+                  <div className="text-white/90 text-sm">Expected Conversion Boost</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-4xl font-bold mb-2">$0</div>
-                  <div className="text-white/90">Photography Costs Saved</div>
+                  <div className="text-3xl font-bold mb-1">$0</div>
+                  <div className="text-white/90 text-sm">Photography Costs Saved</div>
                 </div>
               </div>
             </div>
@@ -249,45 +249,45 @@ const ImageGallery = ({ images }: ImageGalleryProps) => {
         </div>
 
         {/* Marketing Tips */}
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-4xl mx-auto">
           <Card className="border-0 shadow-strong overflow-hidden">
-            <div className="bg-gradient-secondary p-8">
-              <div className="text-center mb-8">
-                <div className="flex items-center justify-center gap-3 mb-4">
-                  <TrendingUp className="w-8 h-8 text-primary" />
-                  <h3 className="text-3xl font-bold text-foreground">Pro Marketing Tips</h3>
-                  <TrendingUp className="w-8 h-8 text-primary" />
+            <div className="bg-gradient-secondary p-6">
+              <div className="text-center mb-6">
+                <div className="flex items-center justify-center gap-2 mb-3">
+                  <TrendingUp className="w-6 h-6 text-primary" />
+                  <h3 className="text-2xl font-bold text-foreground">Pro Marketing Tips</h3>
+                  <TrendingUp className="w-6 h-6 text-primary" />
                 </div>
-                <p className="text-muted-foreground text-lg">Maximize your sales potential with these strategies</p>
+                <p className="text-muted-foreground">Maximize your sales potential with these strategies</p>
               </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="text-center group">
-                  <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4 transition-transform group-hover:scale-110">
-                    <span className="text-3xl">🚀</span>
+                  <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mx-auto mb-3 transition-transform group-hover:scale-110">
+                    <span className="text-2xl">🚀</span>
                   </div>
-                  <h4 className="font-bold text-lg mb-2 text-foreground">A/B Test Everything</h4>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    Test different styles across your marketing channels to find what converts best for your audience.
+                  <h4 className="font-bold mb-2 text-foreground">A/B Test Everything</h4>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Test different styles across your marketing channels to find what converts best.
                   </p>
                 </div>
-                
+
                 <div className="text-center group">
-                  <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4 transition-transform group-hover:scale-110">
-                    <span className="text-3xl">📱</span>
+                  <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mx-auto mb-3 transition-transform group-hover:scale-110">
+                    <span className="text-2xl">📱</span>
                   </div>
-                  <h4 className="font-bold text-lg mb-2 text-foreground">Multi-Platform Strategy</h4>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    Use different variations for Instagram, Amazon, Facebook, and your website for maximum impact.
+                  <h4 className="font-bold mb-2 text-foreground">Multi-Platform Strategy</h4>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Use different variations for Instagram, Amazon, Facebook, and your website.
                   </p>
                 </div>
-                
+
                 <div className="text-center group">
-                  <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4 transition-transform group-hover:scale-110">
-                    <span className="text-3xl">🎯</span>
+                  <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mx-auto mb-3 transition-transform group-hover:scale-110">
+                    <span className="text-2xl">🎯</span>
                   </div>
-                  <h4 className="font-bold text-lg mb-2 text-foreground">Seasonal Campaigns</h4>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
+                  <h4 className="font-bold mb-2 text-foreground">Seasonal Campaigns</h4>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
                     Perfect timing for holiday promotions, seasonal sales, and limited-time offers.
                   </p>
                 </div>

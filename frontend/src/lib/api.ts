@@ -23,6 +23,22 @@ export interface GenerateResponse {
   credits?: number;
 }
 
+export interface Generation {
+  generation_id: string;
+  original_filename: string;
+  created_at: string;
+  generated_count: number;
+  thumbnail_url: string | null;
+  status: string;
+}
+
+export interface GenerationDetails {
+  generation_id: string;
+  original_filename: string;
+  created_at: string;
+  generated_images: GeneratedImage[];
+}
+
 // API Functions
 export const uploadImage = async (file: File): Promise<UploadResponse> => {
   console.log('Uploading image:', file.name, file.size, file.type);
@@ -88,4 +104,39 @@ export const downloadImage = async (url: string, filename: string): Promise<void
     console.error('Download failed:', error);
     throw new Error('Download failed. Please try again.');
   }
+};
+
+// Timeline/History API functions
+export const getUserGenerations = async (): Promise<Generation[]> => {
+  const response = await api.get<{ generations: Generation[] }>('/generations');
+
+  // Transform URLs to be absolute
+  const configuredBase = (import.meta as any).env?.VITE_API_BASE_URL || axios.defaults.baseURL || '';
+  const API_BASE_URL = (configuredBase || '').replace(/\/$/, '');
+  const toAbsoluteUrl = (u: string | null) => {
+    if (!u) return null;
+    return /^https?:\/\//i.test(u) ? u : (API_BASE_URL ? `${API_BASE_URL}${u}` : u);
+  };
+
+  return response.data.generations.map(gen => ({
+    ...gen,
+    thumbnail_url: toAbsoluteUrl(gen.thumbnail_url)
+  }));
+};
+
+export const getGenerationDetails = async (generationId: string): Promise<GenerationDetails> => {
+  const response = await api.get<GenerationDetails>(`/generation/${generationId}`);
+
+  // Transform URLs to be absolute
+  const configuredBase = (import.meta as any).env?.VITE_API_BASE_URL || axios.defaults.baseURL || '';
+  const API_BASE_URL = (configuredBase || '').replace(/\/$/, '');
+  const toAbsoluteUrl = (u: string) => (/^https?:\/\//i.test(u) ? u : (API_BASE_URL ? `${API_BASE_URL}${u}` : u));
+
+  return {
+    ...response.data,
+    generated_images: response.data.generated_images.map(img => ({
+      ...img,
+      url: toAbsoluteUrl(img.url)
+    }))
+  };
 };

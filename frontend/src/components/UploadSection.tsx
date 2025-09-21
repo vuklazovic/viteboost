@@ -186,20 +186,19 @@ const UploadSection = ({ onImagesGenerated }: UploadSectionProps) => {
   };
 
   return (
-    <section className="py-24 bg-gradient-hero" data-section="upload">
+    <section className="py-12 bg-gradient-hero" data-section="upload">
       <div className="container mx-auto px-4">
-        <div className="text-center mb-16">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-full text-sm font-medium text-primary mb-6">
+        <div className="text-center mb-12">
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-full text-sm font-medium text-primary mb-4">
             <Sparkles className="h-4 w-4" />
-            Transform Your Products Now
+            Create New Generation
           </div>
-          <h2 className="text-4xl lg:text-5xl font-bold text-foreground mb-6">
-            Upload. Generate. 
-            <span className="bg-gradient-primary bg-clip-text text-transparent"> Dominate.</span>
+          <h2 className="text-3xl lg:text-4xl font-bold text-foreground mb-4">
+            Upload & Generate
+            <span className="bg-gradient-primary bg-clip-text text-transparent"> Amazing Variations</span>
           </h2>
-          <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-            Drop your product image below and watch AI create professional variations 
-            that'll make your competitors jealous. Takes less than 60 seconds.
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+            Upload your product image and let AI create professional variations in seconds.
           </p>
         </div>
 
@@ -374,33 +373,33 @@ const UploadSection = ({ onImagesGenerated }: UploadSectionProps) => {
 
           {/* Process Flow - only show when no file uploaded */}
           {!uploadedFile && (
-            <div className="mt-20 grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="text-center group">
-                <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center mx-auto mb-6 transition-all duration-300 group-hover:scale-110 group-hover:bg-primary/20">
-                  <Upload className="h-10 w-10 text-primary" />
+                <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4 transition-all duration-300 group-hover:scale-110 group-hover:bg-primary/20">
+                  <Upload className="h-8 w-8 text-primary" />
                 </div>
-                <h4 className="font-bold mb-3 text-xl text-foreground">1. Upload</h4>
-                <p className="text-muted-foreground leading-relaxed">
+                <h4 className="font-bold mb-2 text-lg text-foreground">1. Upload</h4>
+                <p className="text-sm text-muted-foreground leading-relaxed">
                   Drop your product photo. We support all major formats up to 10MB.
                 </p>
               </div>
-              
+
               <div className="text-center group">
-                <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center mx-auto mb-6 transition-all duration-300 group-hover:scale-110 group-hover:bg-primary/20">
-                  <Sparkles className="h-10 w-10 text-primary" />
+                <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4 transition-all duration-300 group-hover:scale-110 group-hover:bg-primary/20">
+                  <Sparkles className="h-8 w-8 text-primary" />
                 </div>
-                <h4 className="font-bold mb-3 text-xl text-foreground">2. AI Magic</h4>
-                <p className="text-muted-foreground leading-relaxed">
+                <h4 className="font-bold mb-2 text-lg text-foreground">2. AI Magic</h4>
+                <p className="text-sm text-muted-foreground leading-relaxed">
                   Our AI analyzes and creates dynamic prompts for stunning variations.
                 </p>
               </div>
-              
+
               <div className="text-center group">
-                <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center mx-auto mb-6 transition-all duration-300 group-hover:scale-110 group-hover:bg-primary/20">
-                  <FileImage className="h-10 w-10 text-primary" />
+                <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4 transition-all duration-300 group-hover:scale-110 group-hover:bg-primary/20">
+                  <FileImage className="h-8 w-8 text-primary" />
                 </div>
-                <h4 className="font-bold mb-3 text-xl text-foreground">3. Dominate</h4>
-                <p className="text-muted-foreground leading-relaxed">
+                <h4 className="font-bold mb-2 text-lg text-foreground">3. Download</h4>
+                <p className="text-sm text-muted-foreground leading-relaxed">
                   Download professional images that convert visitors into customers.
                 </p>
               </div>

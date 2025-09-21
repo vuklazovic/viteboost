@@ -56,6 +56,28 @@ class FileManager:
                     **file_info
                 })
         return user_files
+
+    def get_user_generations(self, user_id: str) -> List[Dict]:
+        """Get user's generation history formatted for timeline display"""
+        generations = []
+        for file_id, file_info in self.metadata.items():
+            if file_info["user_id"] == user_id and file_info.get("generated_files"):
+                # Get the first generated image as thumbnail
+                first_generated = file_info["generated_files"][0] if file_info["generated_files"] else None
+                thumbnail_url = f"/generated/{first_generated['filename']}" if first_generated else None
+
+                generations.append({
+                    "generation_id": file_id,
+                    "original_filename": file_info["filename"],
+                    "created_at": file_info["created_at"],
+                    "generated_count": len(file_info["generated_files"]),
+                    "thumbnail_url": thumbnail_url,
+                    "status": "completed" if file_info["generated_files"] else "pending"
+                })
+
+        # Sort by creation date (newest first)
+        generations.sort(key=lambda x: x["created_at"], reverse=True)
+        return generations
     
     def user_owns_file(self, file_id: str, user_id: str) -> bool:
         return self.get_file_owner(file_id) == user_id

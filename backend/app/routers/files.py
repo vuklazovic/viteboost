@@ -121,3 +121,42 @@ async def download_file(
 async def get_user_files(current_user: Dict[str, Any] = Depends(get_current_user)):
     user_files = file_manager.get_user_files(current_user["user_id"])
     return {"files": user_files}
+
+@router.get("/generations")
+async def get_user_generations(current_user: Dict[str, Any] = Depends(get_current_user)):
+    generations = file_manager.get_user_generations(current_user["user_id"])
+    return {"generations": generations}
+
+@router.get("/generation/{generation_id}")
+async def get_generation_details(
+    generation_id: str,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    # Check if user owns the generation
+    if not file_manager.user_owns_file(generation_id, current_user["user_id"]):
+        raise HTTPException(status_code=403, detail="Access denied: You don't own this generation")
+
+    # Get the generation data
+    user_files = file_manager.get_user_files(current_user["user_id"])
+    generation = next((f for f in user_files if f["file_id"] == generation_id), None)
+
+    if not generation:
+        raise HTTPException(status_code=404, detail="Generation not found")
+
+    # Transform generated files to include full URLs
+    generated_images = []
+    for gen_file in generation.get("generated_files", []):
+        generated_images.append({
+            "filename": gen_file["filename"],
+            "url": f"/generated/{gen_file['filename']}",
+            "created_at": gen_file["created_at"],
+            "style": f"style_{len(generated_images) + 1}",  # Generate style names
+            "description": f"AI-generated variation of {generation['filename']}"
+        })
+
+    return {
+        "generation_id": generation_id,
+        "original_filename": generation["filename"],
+        "created_at": generation["created_at"],
+        "generated_images": generated_images
+    }
