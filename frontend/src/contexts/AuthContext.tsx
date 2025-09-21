@@ -64,7 +64,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const isRefreshingCredits = useRef(false)
   const oauthCallbackProcessed = useRef(false)
   const retryCount = useRef(0)
-  const refreshCreditsTimeout = useRef<NodeJS.Timeout | null>(null)
 
   // Set up axios interceptor for auth token
   useEffect(() => {
@@ -179,12 +178,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUser(userData)
       setSession(sessionData)
       setEmailConfirmationRequired(false)
-      
-      // Mark credits as fetched since we'll fetch them immediately
-      creditsFetched.current = true
-      
-      // Fetch credits immediately for OAuth users
-      await refreshCreditsImmediate()
+
+      // If profile includes credits, apply immediately; otherwise refresh
+      const profileCredits: number | undefined = response.data?.credits
+      const profileCostPerImage: number | undefined = response.data?.cost_per_image
+      const profileNumImages: number | undefined = response.data?.num_images
+
+      if (typeof profileCredits === 'number') {
+        setCredits(profileCredits)
+        if (typeof profileCostPerImage === 'number') setCostPerImage(profileCostPerImage)
+        if (typeof profileNumImages === 'number') setNumImages(profileNumImages)
+
+        localStorage.setItem('auth_credits', JSON.stringify({
+          credits: profileCredits,
+          costPerImage: typeof profileCostPerImage === 'number' ? profileCostPerImage : costPerImage,
+          numImages: typeof profileNumImages === 'number' ? profileNumImages : numImages,
+        }))
+        creditsFetched.current = true
+      } else {
+        creditsFetched.current = false
+        await refreshCreditsImmediate()
+      }
       
       // Store in localStorage
       localStorage.setItem('auth_session', JSON.stringify(sessionData))
@@ -296,9 +310,34 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setUser(userData)
       setSession(sessionData)
       
-      // Store in localStorage
+      // Store auth in localStorage
       localStorage.setItem('auth_session', JSON.stringify(sessionData))
       localStorage.setItem('auth_user', JSON.stringify(userData))
+
+      // If backend includes credits in login response, set them immediately
+      const loginCredits: number | undefined = response.data?.credits
+      const loginCostPerImage: number | undefined = response.data?.cost_per_image
+      const loginNumImages: number | undefined = response.data?.num_images
+
+      if (typeof loginCredits === 'number') {
+        setCredits(loginCredits)
+        if (typeof loginCostPerImage === 'number') setCostPerImage(loginCostPerImage)
+        if (typeof loginNumImages === 'number') setNumImages(loginNumImages)
+
+        // Persist credits locally
+        localStorage.setItem('auth_credits', JSON.stringify({
+          credits: loginCredits,
+          costPerImage: typeof loginCostPerImage === 'number' ? loginCostPerImage : costPerImage,
+          numImages: typeof loginNumImages === 'number' ? loginNumImages : numImages,
+        }))
+
+        // Mark as fetched to avoid an immediate duplicate refresh
+        creditsFetched.current = true
+      } else {
+        // Fallback: fetch credits immediately
+        creditsFetched.current = false
+        await refreshCreditsImmediate()
+      }
     } catch (error) {
       // Re-throw the original error so LoginForm can handle it
       throw error
@@ -320,6 +359,29 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // Store in localStorage
         localStorage.setItem('auth_session', JSON.stringify(sessionData))
         localStorage.setItem('auth_user', JSON.stringify(userData))
+        
+        // If backend returns credits on signup, apply immediately
+        const signupCredits: number | undefined = response.data?.credits
+        const signupCostPerImage: number | undefined = response.data?.cost_per_image
+        const signupNumImages: number | undefined = response.data?.num_images
+
+        if (typeof signupCredits === 'number') {
+          setCredits(signupCredits)
+          if (typeof signupCostPerImage === 'number') setCostPerImage(signupCostPerImage)
+          if (typeof signupNumImages === 'number') setNumImages(signupNumImages)
+
+          localStorage.setItem('auth_credits', JSON.stringify({
+            credits: signupCredits,
+            costPerImage: typeof signupCostPerImage === 'number' ? signupCostPerImage : costPerImage,
+            numImages: typeof signupNumImages === 'number' ? signupNumImages : numImages,
+          }))
+
+          creditsFetched.current = true
+        } else {
+          // Fallback to immediate refresh
+          creditsFetched.current = false
+          await refreshCreditsImmediate()
+        }
         
         toast.success('Account created successfully!')
         return { requiresEmailConfirmation: false }
@@ -351,11 +413,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     oauthCallbackProcessed.current = false
     retryCount.current = 0
     
-    // Clear any pending credit refresh timeout
-    if (refreshCreditsTimeout.current) {
-      clearTimeout(refreshCreditsTimeout.current)
-      refreshCreditsTimeout.current = null
-    }
     
     // Clear localStorage
     localStorage.removeItem('auth_session')
@@ -467,24 +524,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }
 
   const refreshCredits = async (): Promise<void> => {
-    // Clear any existing timeout to debounce rapid calls
-    if (refreshCreditsTimeout.current) {
-      clearTimeout(refreshCreditsTimeout.current)
-    }
-    
-    // Debounce the actual refresh call
-    refreshCreditsTimeout.current = setTimeout(async () => {
-      await refreshCreditsCore(false)
-    }, 500) // 500ms debounce
+    // Now just an alias for immediate refresh since debouncing is no longer needed
+    await refreshCreditsCore(false)
   }
 
   const refreshCreditsImmediate = async (): Promise<void> => {
-    // Clear any existing timeout to prevent interference
-    if (refreshCreditsTimeout.current) {
-      clearTimeout(refreshCreditsTimeout.current)
-      refreshCreditsTimeout.current = null
-    }
-    
     // Execute immediately without debouncing
     await refreshCreditsCore(true)
   }

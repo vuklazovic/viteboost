@@ -36,6 +36,9 @@ class AuthResponse(BaseModel):
     user: UserResponse
     session: SessionResponse
     message: str
+    credits: Optional[int] = None
+    cost_per_image: Optional[int] = None
+    num_images: Optional[int] = None
 
 class MessageResponse(BaseModel):
     message: str
@@ -49,6 +52,10 @@ class UserProfile(BaseModel):
     created_at: str
     updated_at: str
     metadata: Optional[Dict[str, Any]] = None
+    # Optional credit info for convenience when fetching profile
+    credits: Optional[int] = None
+    cost_per_image: Optional[int] = None
+    num_images: Optional[int] = None
     
     @field_validator('created_at', 'updated_at', mode='before')
     @classmethod

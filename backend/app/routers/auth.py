@@ -43,16 +43,24 @@ async def signup(user_data: UserSignUp):
         token_type="bearer"
     )
     
-    # Initialize credits for the new user
+    # Initialize credits for the new user and include in response
+    credits_info = None
     try:
         credit_manager.ensure_user(result["user"].id, settings.INITIAL_CREDITS)
+        user_credits = credit_manager.get_credits(result["user"].id)
+        credits_info = {
+            "credits": user_credits,
+            "cost_per_image": settings.CREDIT_COST_PER_IMAGE,
+            "num_images": settings.NUM_IMAGES,
+        }
     except Exception:
         pass
 
     return AuthResponse(
         user=user_response,
         session=session_response,
-        message="User created successfully"
+        message="User created successfully",
+        **(credits_info or {})
     )
 
 @router.post("/login", response_model=AuthResponse)
@@ -74,10 +82,29 @@ async def login(user_data: UserSignIn):
         token_type="bearer"
     )
     
+    # Ensure credit record exists and include credits for immediate display
+    credits_info = None
+    try:
+        # Ensure the user has a credit record
+        if not credit_manager.has_user(result["user"].id):
+            credit_manager.ensure_user(result["user"].id, settings.INITIAL_CREDITS)
+
+        # Always attempt to fetch credits now
+        user_credits = credit_manager.get_credits(result["user"].id)
+        credits_info = {
+            "credits": user_credits,
+            "cost_per_image": settings.CREDIT_COST_PER_IMAGE,
+            "num_images": settings.NUM_IMAGES,
+        }
+    except Exception as e:
+        # Don't fail login if credits can't be fetched, just log it
+        print(f"Warning: Could not fetch credits for user {result['user'].id}: {e}")
+
     return AuthResponse(
         user=user_response,
         session=session_response,
-        message="Login successful"
+        message="Login successful",
+        **credits_info if credits_info else {}
     )
 
 @router.post("/logout", response_model=MessageResponse)
@@ -111,12 +138,28 @@ async def refresh_token(token_data: RefreshToken):
 
 @router.get("/profile", response_model=UserProfile)
 async def get_profile(current_user: Dict[str, Any] = Depends(get_current_user)):
+    credits_info = {}
+    try:
+        # Ensure user has a credits record and include credit data if available
+        if not credit_manager.has_user(current_user["user_id"]):
+            credit_manager.ensure_user(current_user["user_id"], settings.INITIAL_CREDITS)
+        user_credits = credit_manager.get_credits(current_user["user_id"])
+        credits_info = {
+            "credits": user_credits,
+            "cost_per_image": settings.CREDIT_COST_PER_IMAGE,
+            "num_images": settings.NUM_IMAGES,
+        }
+    except Exception:
+        # If credits can't be read, return profile without credits
+        credits_info = {}
+
     return UserProfile(
         id=current_user["user_id"],
         email=current_user["payload"].get("email", ""),
         created_at=current_user["payload"].get("created_at", ""),
         updated_at=current_user["payload"].get("updated_at", ""),
-        metadata=current_user["payload"].get("user_metadata", {})
+        metadata=current_user["payload"].get("user_metadata", {}),
+        **credits_info,
     )
 
 @router.get("/check-email/{email}", response_model=EmailCheckResponse)

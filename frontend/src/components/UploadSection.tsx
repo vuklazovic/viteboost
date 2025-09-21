@@ -53,8 +53,8 @@ const UploadSection = ({ onImagesGenerated }: UploadSectionProps) => {
       if (typeof result.credits === 'number') {
         updateCredits(result.credits);
       } else {
-        // Fallback to refreshing credits if not in response
-        refreshCredits();
+        // Fallback to refreshing credits immediately if not in response
+        refreshCreditsImmediate();
       }
       
       // Scroll to results
