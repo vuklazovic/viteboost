@@ -309,60 +309,36 @@ export const SubscriptionManagement: React.FC = () => {
                 </Button>
               </div>
             ) : (
-              <div className="flex flex-col gap-2">
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="outline" className="justify-start">
-                      Cancel at Period End
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Cancel Subscription</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Your subscription will continue until {formatDate(subscription.current_period_end)}.
-                        You'll keep your current credits and benefits until then.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Keep Subscription</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={() => handleCancelSubscription(false)}
-                        disabled={actionLoading}
-                      >
-                        Cancel at Period End
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="destructive" className="justify-start">
-                      Cancel Immediately
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Cancel Subscription Immediately</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This will immediately cancel your subscription and downgrade you to the free plan.
-                        Your credits will be reset to the free tier amount. This action cannot be undone.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Keep Subscription</AlertDialogCancel>
-                      <AlertDialogAction
-                        onClick={() => handleCancelSubscription(true)}
-                        disabled={actionLoading}
-                        className="bg-red-600 hover:bg-red-700"
-                      >
-                        Cancel Immediately
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive" className="justify-start">
+                    Cancel Subscription
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Cancel Subscription</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Your subscription will continue until the end of your current billing period on{' '}
+                      {subscription.current_period_end ? formatDate(subscription.current_period_end) : 'your next billing date'}.
+                      You'll keep your current credits and benefits until then. After that, you'll be downgraded to the free plan.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Keep Subscription</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => handleCancelSubscription(false)}
+                      disabled={actionLoading}
+                      className="bg-red-600 hover:bg-red-700"
+                    >
+                      {actionLoading ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : null}
+                      Cancel Subscription
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             )}
           </CardContent>
         </Card>

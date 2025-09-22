@@ -156,7 +156,7 @@ async def get_subscription_status(
             logger.warning(f"Failed to get credits for user {user_id}: {credit_error}")
             user_credits = 0  # Default to 0 if credits fetch fails
 
-        if subscription_result.data and subscription_result.data.get("status") == "active":
+        if subscription_result.data and subscription_result.data.get("status") in ["active", "canceled"]:
             # User has active subscription
             subscription_data = subscription_result.data
             plan_id = subscription_data.get("plan_id", "free")
@@ -506,20 +506,31 @@ async def cancel_subscription(
             raise HTTPException(status_code=404, detail="No Stripe subscription found")
 
         # Cancel the subscription in Stripe
-        if at_period_end:
-            # Cancel at period end
-            subscription = stripe.Subscription.modify(
-                subscription_id,
-                cancel_at_period_end=True
-            )
-        else:
-            # Cancel immediately
-            subscription = stripe.Subscription.cancel(subscription_id)
+        try:
+            if at_period_end:
+                # Cancel at period end
+                subscription = stripe.Subscription.modify(
+                    subscription_id,
+                    cancel_at_period_end=True
+                )
+            else:
+                # Cancel immediately
+                subscription = stripe.Subscription.cancel(subscription_id)
+        except stripe.error.InvalidRequestError as e:
+            if "canceled subscription" in str(e).lower():
+                raise HTTPException(status_code=400, detail="Subscription is already canceled")
+            else:
+                raise HTTPException(status_code=400, detail=f"Cannot cancel subscription: {str(e)}")
+
+        # Safely extract subscription data
+        cancel_at_period_end_status = getattr(subscription, 'cancel_at_period_end', False)
+        current_period_end = getattr(subscription, 'current_period_end', None)
+        subscription_status = getattr(subscription, 'status', 'unknown')
 
         # Update database
         client.table("user_subscriptions").update({
-            "status": subscription.status,
-            "cancel_at_period_end": subscription.cancel_at_period_end,
+            "status": subscription_status,
+            "cancel_at_period_end": cancel_at_period_end_status,
             "updated_at": datetime.utcnow().isoformat()
         }).eq("stripe_subscription_id", subscription_id).execute()
 
@@ -532,7 +543,7 @@ async def cancel_subscription(
         return {
             "message": "Subscription canceled successfully",
             "canceled_at_period_end": at_period_end,
-            "current_period_end": subscription.current_period_end
+            "current_period_end": current_period_end
         }
 
     except stripe.error.StripeError as e:
@@ -568,20 +579,31 @@ async def reactivate_subscription(
             raise HTTPException(status_code=404, detail="No Stripe subscription found")
 
         # Reactivate the subscription in Stripe
-        subscription = stripe.Subscription.modify(
-            subscription_id,
-            cancel_at_period_end=False
-        )
+        try:
+            subscription = stripe.Subscription.modify(
+                subscription_id,
+                cancel_at_period_end=False
+            )
+        except stripe.error.InvalidRequestError as e:
+            if "canceled" in str(e).lower():
+                raise HTTPException(status_code=400, detail="Cannot reactivate a fully canceled subscription. Please create a new subscription.")
+            else:
+                raise HTTPException(status_code=400, detail=f"Cannot reactivate subscription: {str(e)}")
+
+        # Safely extract subscription data
+        current_period_end = getattr(subscription, 'current_period_end', None)
+        subscription_status = getattr(subscription, 'status', 'unknown')
 
         # Update database
         client.table("user_subscriptions").update({
+            "status": subscription_status,
             "cancel_at_period_end": False,
             "updated_at": datetime.utcnow().isoformat()
         }).eq("stripe_subscription_id", subscription_id).execute()
 
         return {
             "message": "Subscription reactivated successfully",
-            "current_period_end": subscription.current_period_end
+            "current_period_end": current_period_end
         }
 
     except stripe.error.StripeError as e:
