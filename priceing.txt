@@ -1,0 +1,28 @@
+| Plan         | Cena / mesec | Broj slika | Tvoj trošak slika | Stripe fee\* | Ukupan trošak | **Profit**                   |
+| ------------ | ------------ | ---------- | ----------------- | ------------ | ------------- | ---------------------------- |
+| **Free**     | \$0          | 15         | **\$0.60**        | –            | **\$0.60**    | –\$0.60 (marketinški trošak) |
+| **Basic**    | **\$12**     | 100        | **\$4.00**        | \$0.66       | **\$4.66**    | **\~\$7.34**                 |
+| **Pro**      | **\$39**     | 500        | **\$20.00**       | \$1.47       | **\$21.47**   | **\~\$17.53**                |
+| **Business** | **\$89**     | 1.500      | **\$60.00**       | \$2.97       | **\$62.97**   | **\~\$26.03**                |
+
+
+prod_T6KHyx8rT3FuZw
+prod_T6KWg56uGCU5M8
+prod_T6KXqIAYquAPt1
+
+
+pk_test_51Rb16KDApD6mGm7q2O5pkiPKaODXtvRpkSphnv4k3gMD9JhKSMGJRi22LaioyHuYy30yeuv3qVDVmkuL36sVmCV200Xsrbsv0w
+sk_test_51Rb16KDApD6mGm7qK5AGONDfZbG1Lbjq99sWVV1qvf9M2dOzzstY9oJMn3t55CH7AQpnmoCasDbHG0s3Sk4bHqjI00Igg29QLs
+
+
+
+i want to implement payment system using stripe. we will use monthly recuring system. there is FREE plan, its 15 credits, so when user register he have 15 credits, every month at same date his
+credits go back to 15. Next is Basic plan its 12$ and you get 100 credits.same logic, when user pay this plan every month at same time his credits are reset to 100. here is the  product_id for basic plan : prod_T6KHyx8rT3FuZw
+
+next plan is Pro, 39$ ,500 credits, same logic
+next plan is Business 89$, 1500 credits, same logic
+
+my publishable key is = pk_test_51Rb16KDApD6mGm7q2O5pkiPKaODXtvRpkSphnv4k3gMD9JhKSMGJRi22LaioyHuYy30yeuv3qVDVmkuL36sVmCV200Xsrbsv0w
+my secret key is = sk_test_51Rb16KDApD6mGm7qK5AGONDfZbG1Lbjq99sWVV1qvf9M2dOzzstY9oJMn3t55CH7AQpnmoCasDbHG0s3Sk4bHqjI00Igg29QLs
+
+implement this, its sandbox verions for now

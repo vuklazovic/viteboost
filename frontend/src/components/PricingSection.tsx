@@ -1,6 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Check, Star } from "lucide-react";
+import { Check, Star, Crown } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 interface PricingSectionProps {
   onTryNow?: () => void;
@@ -8,56 +11,132 @@ interface PricingSectionProps {
 
 const plans = [
   {
-    name: "Starter",
+    id: "free",
+    name: "Free",
     price: "Free",
     period: "forever",
     description: "Perfect for trying out VibeBoost",
     features: [
-      "5 images per month",
-      "Basic AI enhancement",
-      "Standard quality output",
+      "15 credits per month",
+      "Basic image generation",
+      "Standard processing speed",
       "Email support"
     ],
     cta: "Get Started",
     variant: "outline" as const
   },
   {
+    id: "basic",
+    name: "Basic",
+    price: "$12",
+    period: "per month",
+    description: "Great for individuals",
+    features: [
+      "100 credits per month",
+      "Priority processing",
+      "Email support",
+      "HD image generation"
+    ],
+    cta: "Subscribe",
+    variant: "outline" as const
+  },
+  {
+    id: "pro",
     name: "Pro",
-    price: "$29",
+    price: "$39",
     period: "per month",
     description: "For creators and small businesses",
     features: [
-      "500 images per month",
-      "Advanced AI enhancement",
-      "HD quality output",
-      "Multiple style variants",
+      "500 credits per month",
+      "Fast processing",
       "Priority support",
-      "Commercial license"
+      "Advanced features",
+      "HD image generation"
     ],
-    cta: "Start Free Trial",
+    cta: "Subscribe",
     variant: "hero" as const,
     popular: true
   },
   {
+    id: "business",
     name: "Business",
-    price: "$99",
+    price: "$89",
     period: "per month",
     description: "For agencies and large teams",
     features: [
-      "2,500 images per month",
-      "Enterprise AI models",
-      "4K quality output",
-      "Custom brand templates",
-      "Team collaboration",
-      "24/7 phone support",
+      "1500 credits per month",
+      "Fastest processing",
+      "Premium support",
+      "All advanced features",
+      "HD image generation",
       "API access"
     ],
+    cta: "Subscribe",
+    variant: "outline" as const
+  },
+  {
+    id: "enterprise",
+    name: "Enterprise",
+    price: "Custom",
+    period: "pricing",
+    description: "Custom solutions for large organizations",
+    features: [
+      "Custom credit allocation",
+      "Dedicated infrastructure",
+      "24/7 priority support",
+      "Custom integrations",
+      "Advanced analytics",
+      "SLA guarantee",
+      "Dedicated account manager"
+    ],
     cta: "Contact Sales",
-    variant: "premium" as const
+    variant: "premium" as const,
+    enterprise: true
   }
 ];
 
 const PricingSection = ({ onTryNow }: PricingSectionProps) => {
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+
+  const handlePlanSelect = async (planId: string) => {
+    if (planId === "free") {
+      if (!isAuthenticated) {
+        navigate("/auth");
+        return;
+      }
+      toast.info("You're already on the free plan! Sign in to get started.");
+      return;
+    }
+
+    if (planId === "enterprise") {
+      toast.info("Enterprise plans require custom setup. Please contact our sales team.");
+      return;
+    }
+
+    if (!isAuthenticated) {
+      navigate("/auth");
+      return;
+    }
+
+    // Get payment link from backend and redirect to Stripe
+    try {
+      const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
+      const response = await fetch(`${API_BASE_URL}/subscriptions/plans`);
+      const data = await response.json();
+      const plan = data.plans.find((p: any) => p.id === planId);
+
+      if (plan?.payment_link) {
+        window.open(plan.payment_link, '_blank');
+      } else {
+        toast.error("Payment link not available for this plan");
+      }
+    } catch (error) {
+      console.error('Payment link error:', error);
+      toast.error("Failed to get payment link");
+    }
+  };
+
   return (
     <section id="pricing" className="py-24 bg-background">
       <div className="container mx-auto px-4">
@@ -71,19 +150,29 @@ const PricingSection = ({ onTryNow }: PricingSectionProps) => {
           </p>
         </div>
         
-        <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6 max-w-7xl mx-auto">
           {plans.map((plan, index) => (
-            <Card 
-              key={index} 
+            <Card
+              key={index}
               className={`relative border-0 shadow-soft hover:shadow-medium transition-all duration-300 hover:-translate-y-1 ${
                 plan.popular ? 'ring-2 ring-primary/20 shadow-medium scale-105' : ''
+              } ${
+                plan.enterprise ? 'border-purple-200 bg-gradient-to-br from-purple-50 to-indigo-50' : ''
               }`}
             >
-              {plan.popular && (
+              {plan.popular && !plan.enterprise && (
                 <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
                   <div className="bg-gradient-primary text-primary-foreground px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-1">
                     <Star className="h-4 w-4" />
                     Most Popular
+                  </div>
+                </div>
+              )}
+              {plan.enterprise && (
+                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                  <div className="bg-purple-600 text-white px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-1">
+                    <Crown className="h-4 w-4" />
+                    Need More?
                   </div>
                 </div>
               )}
@@ -109,11 +198,13 @@ const PricingSection = ({ onTryNow }: PricingSectionProps) => {
                   ))}
                 </ul>
                 
-                <Button 
-                  variant={plan.variant} 
-                  size="lg" 
-                  className="w-full"
-                  onClick={onTryNow}
+                <Button
+                  variant={plan.variant}
+                  size="lg"
+                  className={`w-full ${
+                    plan.enterprise ? 'bg-purple-600 hover:bg-purple-700 text-white' : ''
+                  }`}
+                  onClick={() => handlePlanSelect(plan.id)}
                 >
                   {plan.cta}
                 </Button>

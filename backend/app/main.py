@@ -4,6 +4,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.core.config import settings
 from app.routers import auth, files
+from app.routers import subscriptions_simple as subscriptions
 
 app = FastAPI(title=settings.API_TITLE, version=settings.API_VERSION)
 
@@ -23,6 +24,7 @@ app.mount("/generated", StaticFiles(directory=settings.GENERATED_DIR), name="gen
 # Include routers
 app.include_router(auth.router)
 app.include_router(files.router)
+app.include_router(subscriptions.router)
 
 @app.on_event("startup")
 async def vb_startup_check():
