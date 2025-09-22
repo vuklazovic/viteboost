@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from typing import Dict, Any, List
 import logging
 import stripe
+from datetime import datetime
 
 from app.core.config import settings
 from app.services.auth import get_current_user
@@ -134,31 +135,104 @@ async def get_subscription_status(
 ) -> Dict[str, Any]:
     """Get user's current subscription status"""
     try:
-        # For now, return free plan status
-        # You can enhance this later to check actual subscription status from database
+        user_id = current_user.get("user_id") or current_user.get("id")
+        logger.info(f"Getting subscription status for user: {user_id}")
 
-        plan_config = settings.SUBSCRIPTION_PLANS["free"]
+        if not user_id:
+            raise HTTPException(status_code=401, detail="User not authenticated")
 
-        result = {
-            "subscription": None,  # No active paid subscription
-            "plan": {
-                "id": "free",
-                "name": plan_config["name"],
-                "price": plan_config["price"],
-                "credits": plan_config["credits"]
-            },
-            "credits": {
-                "current": 15,  # You can get this from credit manager later
-                "last_reset": None,
-                "next_reset": None
+        # Get user's subscription from database
+        from supabase import create_client
+        client = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_ROLE_KEY)
+
+        # Get subscription info
+        subscription_result = client.table("user_subscriptions").select("*").eq("user_id", user_id).maybe_single().execute()
+
+        # Get current credits with error handling
+        try:
+            from app.services.credits import credit_manager
+            user_credits = credit_manager.get_credits(user_id)
+        except Exception as credit_error:
+            logger.warning(f"Failed to get credits for user {user_id}: {credit_error}")
+            user_credits = 0  # Default to 0 if credits fetch fails
+
+        if subscription_result.data and subscription_result.data.get("status") == "active":
+            # User has active subscription
+            subscription_data = subscription_result.data
+            plan_id = subscription_data.get("plan_id", "free")
+            plan_config = settings.SUBSCRIPTION_PLANS.get(plan_id, settings.SUBSCRIPTION_PLANS["free"])
+
+            # Get Stripe subscription details
+            stripe_subscription_id = subscription_data.get("stripe_subscription_id")
+            stripe_subscription = None
+            if stripe_subscription_id:
+                try:
+                    stripe_subscription = stripe.Subscription.retrieve(stripe_subscription_id)
+                except:
+                    logger.warning(f"Failed to retrieve Stripe subscription {stripe_subscription_id}")
+
+            # Safely extract Stripe subscription data
+            current_period_start = None
+            current_period_end = None
+            cancel_at_period_end = False
+
+            if stripe_subscription:
+                try:
+                    current_period_start = getattr(stripe_subscription, 'current_period_start', None)
+                    current_period_end = getattr(stripe_subscription, 'current_period_end', None)
+                    cancel_at_period_end = getattr(stripe_subscription, 'cancel_at_period_end', False)
+                except Exception as stripe_error:
+                    logger.warning(f"Error accessing Stripe subscription attributes: {stripe_error}")
+
+            result = {
+                "subscription": {
+                    "id": subscription_data.get("id"),
+                    "stripe_customer_id": subscription_data.get("stripe_customer_id"),
+                    "stripe_subscription_id": stripe_subscription_id,
+                    "plan_id": plan_id,
+                    "status": subscription_data.get("status"),
+                    "current_period_start": current_period_start,
+                    "current_period_end": current_period_end,
+                    "cancel_at_period_end": cancel_at_period_end
+                },
+                "plan": {
+                    "id": plan_id,
+                    "name": plan_config["name"],
+                    "price": plan_config["price"],
+                    "credits": plan_config["credits"]
+                },
+                "credits": {
+                    "current": user_credits,
+                    "last_reset": subscription_data.get("last_reset"),
+                    "next_reset": subscription_data.get("next_reset")
+                }
             }
-        }
+        else:
+            # User is on free plan
+            plan_config = settings.SUBSCRIPTION_PLANS["free"]
+            result = {
+                "subscription": None,
+                "plan": {
+                    "id": "free",
+                    "name": plan_config["name"],
+                    "price": plan_config["price"],
+                    "credits": plan_config["credits"]
+                },
+                "credits": {
+                    "current": user_credits,
+                    "last_reset": None,
+                    "next_reset": None
+                }
+            }
 
+        logger.info(f"Subscription status result for user {user_id}: {result}")
         return result
 
     except Exception as e:
         user_id = current_user.get('user_id', 'unknown')
         logger.error(f"Failed to get subscription status for user {user_id}: {e}")
+        import traceback
+        logger.error(f"Full traceback: {traceback.format_exc()}")
         raise HTTPException(status_code=500, detail="Failed to get subscription status")
 
 @router.post("/webhook")
@@ -403,4 +477,157 @@ async def get_user_from_subscription(subscription_id: str) -> str:
     except Exception as e:
         logger.error(f"Error getting user from subscription {subscription_id}: {e}")
         return None
+
+
+@router.post("/cancel")
+async def cancel_subscription(
+    request_data: Dict[str, Any],
+    current_user: Dict[str, Any] = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """Cancel user's subscription"""
+    try:
+        at_period_end = request_data.get("at_period_end", True)
+        user_id = current_user.get("user_id") or current_user.get("id")
+
+        if not user_id:
+            raise HTTPException(status_code=401, detail="User not authenticated")
+
+        # Get user's subscription from database
+        from supabase import create_client
+        client = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_ROLE_KEY)
+
+        result = client.table("user_subscriptions").select("*").eq("user_id", user_id).maybe_single().execute()
+
+        if not result.data:
+            raise HTTPException(status_code=404, detail="No active subscription found")
+
+        subscription_id = result.data.get("stripe_subscription_id")
+        if not subscription_id:
+            raise HTTPException(status_code=404, detail="No Stripe subscription found")
+
+        # Cancel the subscription in Stripe
+        if at_period_end:
+            # Cancel at period end
+            subscription = stripe.Subscription.modify(
+                subscription_id,
+                cancel_at_period_end=True
+            )
+        else:
+            # Cancel immediately
+            subscription = stripe.Subscription.cancel(subscription_id)
+
+        # Update database
+        client.table("user_subscriptions").update({
+            "status": subscription.status,
+            "cancel_at_period_end": subscription.cancel_at_period_end,
+            "updated_at": datetime.utcnow().isoformat()
+        }).eq("stripe_subscription_id", subscription_id).execute()
+
+        # If canceled immediately, reset credits to free plan
+        if not at_period_end:
+            from app.services.credits import credit_manager
+            free_credits = settings.SUBSCRIPTION_PLANS["free"]["credits"]
+            credit_manager.renew_credits(user_id, free_credits, "free")
+
+        return {
+            "message": "Subscription canceled successfully",
+            "canceled_at_period_end": at_period_end,
+            "current_period_end": subscription.current_period_end
+        }
+
+    except stripe.error.StripeError as e:
+        logger.error(f"Stripe error canceling subscription: {e}")
+        raise HTTPException(status_code=400, detail=f"Failed to cancel subscription: {str(e)}")
+    except Exception as e:
+        logger.error(f"Error canceling subscription: {e}")
+        raise HTTPException(status_code=500, detail="Failed to cancel subscription")
+
+
+@router.post("/reactivate")
+async def reactivate_subscription(
+    current_user: Dict[str, Any] = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """Reactivate a canceled subscription"""
+    try:
+        user_id = current_user.get("user_id") or current_user.get("id")
+
+        if not user_id:
+            raise HTTPException(status_code=401, detail="User not authenticated")
+
+        # Get user's subscription from database
+        from supabase import create_client
+        client = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_ROLE_KEY)
+
+        result = client.table("user_subscriptions").select("*").eq("user_id", user_id).maybe_single().execute()
+
+        if not result.data:
+            raise HTTPException(status_code=404, detail="No subscription found")
+
+        subscription_id = result.data.get("stripe_subscription_id")
+        if not subscription_id:
+            raise HTTPException(status_code=404, detail="No Stripe subscription found")
+
+        # Reactivate the subscription in Stripe
+        subscription = stripe.Subscription.modify(
+            subscription_id,
+            cancel_at_period_end=False
+        )
+
+        # Update database
+        client.table("user_subscriptions").update({
+            "cancel_at_period_end": False,
+            "updated_at": datetime.utcnow().isoformat()
+        }).eq("stripe_subscription_id", subscription_id).execute()
+
+        return {
+            "message": "Subscription reactivated successfully",
+            "current_period_end": subscription.current_period_end
+        }
+
+    except stripe.error.StripeError as e:
+        logger.error(f"Stripe error reactivating subscription: {e}")
+        raise HTTPException(status_code=400, detail=f"Failed to reactivate subscription: {str(e)}")
+    except Exception as e:
+        logger.error(f"Error reactivating subscription: {e}")
+        raise HTTPException(status_code=500, detail="Failed to reactivate subscription")
+
+
+@router.get("/billing-portal")
+async def create_billing_portal_session(
+    current_user: Dict[str, Any] = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """Create a Stripe billing portal session"""
+    try:
+        user_id = current_user.get("user_id") or current_user.get("id")
+
+        if not user_id:
+            raise HTTPException(status_code=401, detail="User not authenticated")
+
+        # Get user's subscription from database
+        from supabase import create_client
+        client = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_ROLE_KEY)
+
+        result = client.table("user_subscriptions").select("*").eq("user_id", user_id).maybe_single().execute()
+
+        if not result.data:
+            raise HTTPException(status_code=404, detail="No subscription found")
+
+        customer_id = result.data.get("stripe_customer_id")
+        if not customer_id:
+            raise HTTPException(status_code=404, detail="No Stripe customer found")
+
+        # Create billing portal session
+        session = stripe.billing_portal.Session.create(
+            customer=customer_id,
+            return_url=f"{settings.FRONTEND_URL}/subscription"
+        )
+
+        return {"url": session.url}
+
+    except stripe.error.StripeError as e:
+        logger.error(f"Stripe error creating billing portal: {e}")
+        raise HTTPException(status_code=400, detail=f"Failed to create billing portal: {str(e)}")
+    except Exception as e:
+        logger.error(f"Error creating billing portal: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create billing portal")
 
