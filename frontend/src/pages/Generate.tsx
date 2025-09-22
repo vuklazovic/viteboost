@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -44,7 +45,8 @@ const Generate = () => {
   const [recentGenerations, setRecentGenerations] = useState<any[]>([]);
 
   const queryClient = useQueryClient();
-  const { user, credits } = useAuth();
+  const { user, credits, refreshCredits } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // Fetch generations for smart initial state
   const { data: generations = [], isLoading } = useQuery({
@@ -63,6 +65,24 @@ const Generate = () => {
       }
     }
   }, [generations, isLoading]);
+
+  // Handle payment success feedback
+  useEffect(() => {
+    const paymentSuccess = searchParams.get('payment');
+    if (paymentSuccess === 'success') {
+      // Refresh credits to get updated balance
+      refreshCredits();
+
+      // Show success message
+      toast.success('🎉 Payment successful! Your subscription is now active and your credits have been updated.');
+
+      // Remove payment parameter from URL
+      const newSearchParams = new URLSearchParams(searchParams);
+      newSearchParams.delete('payment');
+      newSearchParams.delete('session_id');
+      setSearchParams(newSearchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams, refreshCredits]);
 
   // Handle new images generated
   const handleImagesGenerated = (images: GeneratedImage[], uploadId: string) => {

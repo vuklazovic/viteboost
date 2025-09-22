@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Zap, LogOut, User, Loader2 } from "lucide-react";
+import { Zap, LogOut, User, Loader2, CreditCard } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -95,6 +95,10 @@ const Header = () => {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate('/subscription')}>
+                  <CreditCard className="mr-2 h-4 w-4" />
+                  <span>Manage Subscription</span>
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={logout}>
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Log out</span>
