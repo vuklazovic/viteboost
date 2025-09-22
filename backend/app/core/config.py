@@ -36,7 +36,7 @@ class Settings:
     ALLOWED_EXTENSIONS: set = {".jpg", ".jpeg", ".png", ".webp"}
     
     # Frontend URL
-    FRONTEND_URL: str = "http://localhost:8081"
+    FRONTEND_URL: str = "http://localhost:8080"
     
     # Credits Configuration
     INITIAL_CREDITS: int = int(os.getenv("INITIAL_CREDITS", "100"))

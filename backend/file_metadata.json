@@ -501,5 +501,25 @@
         "created_at": "2025-09-21T14:16:17.370336"
       }
     ]
+  },
+  "79d04f43-5f5c-4578-a3d9-76167361cc7e": {
+    "user_id": "4165e2cb-939c-4348-9c78-799e52af32f0",
+    "filename": "79d04f43-5f5c-4578-a3d9-76167361cc7e.png",
+    "file_type": "upload",
+    "created_at": "2025-09-22T13:17:40.168119",
+    "generated_files": [
+      {
+        "filename": "79d04f43-5f5c-4578-a3d9-76167361cc7e_generated_1.png",
+        "created_at": "2025-09-22T13:17:56.327723"
+      },
+      {
+        "filename": "79d04f43-5f5c-4578-a3d9-76167361cc7e_generated_3.png",
+        "created_at": "2025-09-22T13:17:56.328294"
+      },
+      {
+        "filename": "79d04f43-5f5c-4578-a3d9-76167361cc7e_generated_2.png",
+        "created_at": "2025-09-22T13:17:56.328906"
+      }
+    ]
   }
 }

@@ -13,16 +13,10 @@ stripe.api_key = settings.STRIPE_SECRET_KEY
 
 router = APIRouter(prefix="/subscriptions", tags=["subscriptions"])
 
-# Stripe Payment Links for each plan (you'll need to create these in Stripe Dashboard)
-PAYMENT_LINKS = {
-    "basic": "https://buy.stripe.com/test_cNicN519E46LbVA6ggbZe02",  # Replace with actual Stripe payment link
-    "pro": "https://buy.stripe.com/test_bJeeVddWq32HaRw6ggbZe01",      # Replace with actual Stripe payment link
-    "business": "https://buy.stripe.com/test_00w9AT9Ga6eT3p47kkbZe00"  # Replace with actual Stripe payment link
-}
 
 @router.get("/plans")
 async def get_subscription_plans() -> Dict[str, Any]:
-    """Get list of available subscription plans with payment links"""
+    """Get list of available subscription plans"""
     plans = []
     for plan_id, plan_data in settings.SUBSCRIPTION_PLANS.items():
         plan = {
@@ -32,17 +26,65 @@ async def get_subscription_plans() -> Dict[str, Any]:
             "credits": plan_data["credits"],
             "features": get_plan_features(plan_id)
         }
-
-        # Add payment link for paid plans
-        if plan_id in PAYMENT_LINKS:
-            plan["payment_link"] = PAYMENT_LINKS[plan_id]
-
         plans.append(plan)
 
     return {
         "plans": plans,
         "publishable_key": settings.STRIPE_PUBLISHABLE_KEY
     }
+
+@router.post("/create-checkout-session")
+async def create_checkout_session(
+    request_data: Dict[str, Any],
+    current_user: Dict[str, Any] = Depends(get_current_user)
+) -> Dict[str, Any]:
+    """Create a Stripe checkout session with user metadata"""
+    try:
+        plan_id = request_data.get("plan_id")
+
+        if not plan_id or plan_id not in settings.SUBSCRIPTION_PLANS:
+            raise HTTPException(status_code=400, detail="Invalid plan")
+
+        if plan_id == "free":
+            raise HTTPException(status_code=400, detail="Cannot create checkout for free plan")
+
+        plan_config = settings.SUBSCRIPTION_PLANS[plan_id]
+
+        # Create Stripe checkout session with user metadata
+        checkout_session = stripe.checkout.Session.create(
+            payment_method_types=['card'],
+            line_items=[{
+                'price_data': {
+                    'currency': 'usd',
+                    'product_data': {
+                        'name': f'VibeBoost {plan_config["name"]} Plan',
+                        'description': f'{plan_config["credits"]} credits per month'
+                    },
+                    'unit_amount': plan_config["price"],
+                    'recurring': {
+                        'interval': 'month'
+                    }
+                },
+                'quantity': 1,
+            }],
+            mode='subscription',
+            success_url=f"{settings.FRONTEND_URL}/subscription-success?session_id={{CHECKOUT_SESSION_ID}}",
+            cancel_url=f"{settings.FRONTEND_URL}/pricing",
+            metadata={
+                'user_id': current_user['user_id'],
+                'plan_id': plan_id,
+                'user_email': current_user.get('payload', {}).get('email', '')
+            },
+            customer_email=current_user.get('payload', {}).get('email')
+        )
+
+        return {"checkout_url": checkout_session.url}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to create checkout session: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create checkout session")
 
 def get_plan_features(plan_id: str) -> List[str]:
     """Get features for a specific plan"""
@@ -147,10 +189,12 @@ async def stripe_webhook(request: Request):
             )
 
         logger.info(f"Received Stripe webhook: {event['type']}")
+        logger.info(f"Event data keys: {list(event.get('data', {}).get('object', {}).keys())}")
 
         # Handle successful checkout sessions
         if event['type'] == 'checkout.session.completed':
             session = event['data']['object']
+            logger.info(f"Checkout session data: customer_details={session.get('customer_details')}, amount_total={session.get('amount_total')}")
             await handle_successful_payment(session)
 
         # Handle subscription events
@@ -177,42 +221,48 @@ async def stripe_webhook(request: Request):
 async def handle_successful_payment(session):
     """Handle successful payment from checkout session"""
     try:
-        # Extract customer email from the session
-        customer_email = session.get('customer_details', {}).get('email')
+        logger.info(f"=== HANDLING SUCCESSFUL PAYMENT ===")
 
-        if not customer_email:
-            logger.warning("No customer email in checkout session")
+        # Get user info from metadata (required for checkout sessions)
+        metadata = session.get('metadata', {})
+        user_id = metadata.get('user_id')
+        plan_id = metadata.get('plan_id')
+
+        logger.info(f"Processing payment - User: {user_id}, Plan: {plan_id}")
+
+        if not user_id or not plan_id:
+            logger.error("Missing user_id or plan_id in session metadata. Session was not created properly.")
+            logger.error(f"Metadata: {metadata}")
             return
 
-        # Determine plan from the session
-        amount = session.get('amount_total', 0)
-        plan_id = determine_plan_from_amount(amount)
-
-        logger.info(f"Processing payment for {customer_email}, plan: {plan_id}, amount: {amount}")
-
-        # Find user by email (you might need to adjust this based on your auth system)
-        user_id = await find_user_by_email(customer_email)
-        if not user_id:
-            logger.error(f"Could not find user with email: {customer_email}")
-            return
-
-        # Create customer record if needed
+        # Get session details
         customer_id = session.get('customer')
         subscription_id = session.get('subscription')
+        logger.info(f"Customer ID: {customer_id}, Subscription ID: {subscription_id}")
 
         # Save subscription to database if we have subscription ID
         if subscription_id:
+            logger.info(f"Saving subscription record...")
             await save_subscription_record(user_id, customer_id, subscription_id, plan_id)
+        else:
+            logger.warning("No subscription ID found in session")
 
         # Update user credits immediately
+        logger.info(f"Updating user credits...")
         from app.services.credits import credit_manager
         plan_config = settings.SUBSCRIPTION_PLANS.get(plan_id)
         if plan_config:
-            credit_manager.renew_credits(user_id, plan_config["credits"], plan_id)
-            logger.info(f"Updated credits for user {user_id} to {plan_config['credits']} credits")
+            result = credit_manager.renew_credits(user_id, plan_config["credits"], plan_id)
+            logger.info(f"Updated credits for user {user_id} to {plan_config['credits']} credits, result: {result}")
+        else:
+            logger.error(f"No plan config found for plan: {plan_id}")
+
+        logger.info(f"=== PAYMENT HANDLING COMPLETED ===")
 
     except Exception as e:
         logger.error(f"Error handling successful payment: {e}")
+        import traceback
+        logger.error(f"Full traceback: {traceback.format_exc()}")
 
 async def handle_subscription_created(subscription):
     """Handle subscription creation"""
@@ -267,64 +317,6 @@ async def handle_payment_succeeded(invoice):
     except Exception as e:
         logger.error(f"Error handling payment succeeded: {e}")
 
-async def find_user_by_email(email: str) -> str:
-    """Find user ID by email address"""
-    try:
-        from supabase import create_client
-        client = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_ROLE_KEY)
-
-        # Try direct SQL query to auth.users table (more reliable)
-        try:
-            result = client.rpc('get_user_by_email', {'email_input': email}).execute()
-            if result.data:
-                return result.data
-        except Exception as rpc_error:
-            logger.info(f"RPC method not available, trying admin API: {rpc_error}")
-
-        # Fallback to admin API with better error handling
-        try:
-            result = client.auth.admin.list_users()
-
-            # Handle different response structures
-            users_list = []
-            if hasattr(result, 'users'):
-                users_list = result.users
-            elif hasattr(result, 'data') and isinstance(result.data, list):
-                users_list = result.data
-            elif isinstance(result, dict) and 'users' in result:
-                users_list = result['users']
-            elif isinstance(result, list):
-                users_list = result
-            else:
-                logger.error(f"Cannot parse auth result: {type(result)} - {result}")
-                return None
-
-            # Search for user by email
-            for user in users_list:
-                user_email = None
-                user_id = None
-
-                if hasattr(user, 'email'):
-                    user_email = user.email
-                    user_id = user.id
-                elif isinstance(user, dict):
-                    user_email = user.get('email')
-                    user_id = user.get('id')
-
-                if user_email == email and user_id:
-                    logger.info(f"Found user {user_id} for email {email}")
-                    return user_id
-
-            logger.warning(f"User not found with email: {email}")
-            return None
-
-        except Exception as admin_error:
-            logger.error(f"Admin API error: {admin_error}")
-            return None
-
-    except Exception as e:
-        logger.error(f"Error finding user by email {email}: {e}")
-        return None
 
 async def save_subscription_record(user_id: str, customer_id: str, subscription_id: str, plan_id: str):
     """Save subscription record to database"""
@@ -412,14 +404,3 @@ async def get_user_from_subscription(subscription_id: str) -> str:
         logger.error(f"Error getting user from subscription {subscription_id}: {e}")
         return None
 
-def determine_plan_from_amount(amount_cents):
-    """Determine plan ID from payment amount"""
-    if amount_cents == 1200:  # $12.00
-        return "basic"
-    elif amount_cents == 3900:  # $39.00
-        return "pro"
-    elif amount_cents == 8900:  # $89.00
-        return "business"
-    else:
-        logger.warning(f"Unknown amount: {amount_cents}")
-        return "basic"  # Default to basic

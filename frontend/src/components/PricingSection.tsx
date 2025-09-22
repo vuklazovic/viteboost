@@ -96,7 +96,7 @@ const plans = [
 ];
 
 const PricingSection = ({ onTryNow }: PricingSectionProps) => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, session } = useAuth();
   const navigate = useNavigate();
 
   const handlePlanSelect = async (planId: string) => {
@@ -119,21 +119,35 @@ const PricingSection = ({ onTryNow }: PricingSectionProps) => {
       return;
     }
 
-    // Get payment link from backend and redirect to Stripe
+    // Create checkout session with user metadata
     try {
       const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000';
-      const response = await fetch(`${API_BASE_URL}/subscriptions/plans`);
-      const data = await response.json();
-      const plan = data.plans.find((p: any) => p.id === planId);
 
-      if (plan?.payment_link) {
-        window.open(plan.payment_link, '_blank');
+      if (!session?.access_token) {
+        toast.error("Please sign in to continue");
+        navigate("/auth");
+        return;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/subscriptions/create-checkout-session`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ plan_id: planId })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        window.location.href = data.checkout_url;
       } else {
-        toast.error("Payment link not available for this plan");
+        const errorData = await response.json().catch(() => ({}));
+        toast.error(errorData.detail || "Failed to create checkout session");
       }
     } catch (error) {
-      console.error('Payment link error:', error);
-      toast.error("Failed to get payment link");
+      console.error('Payment error:', error);
+      toast.error("Failed to process payment");
     }
   };
 

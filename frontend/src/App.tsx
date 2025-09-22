@@ -13,6 +13,7 @@ import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 import Landing from "./pages/Landing";
 import Subscription from "./pages/Subscription";
+import SubscriptionSuccess from "./pages/SubscriptionSuccess";
 
 const queryClient = new QueryClient();
 
@@ -49,6 +50,14 @@ const App = () => (
               element={
                 <ProtectedRoute>
                   <Subscription />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/subscription-success"
+              element={
+                <ProtectedRoute>
+                  <SubscriptionSuccess />
                 </ProtectedRoute>
               }
             />
