@@ -1,5 +1,5 @@
 from supabase import create_client, Client
-from fastapi import HTTPException, Depends, status
+from fastapi import HTTPException, Depends, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Optional, Dict, Any
 
@@ -220,7 +220,7 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authorization token required"
         )
-    
+
     token = credentials.credentials
     return verify_token(token)
 

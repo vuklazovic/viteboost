@@ -14,6 +14,7 @@ interface Session {
   refresh_token: string
   expires_in: number
   token_type: string
+  created_at?: number
 }
 
 
@@ -21,6 +22,7 @@ interface AuthContextType {
   user: User | null
   session: Session | null
   loading: boolean
+  authReady: boolean
   emailConfirmationRequired: boolean
   credits: number
   costPerImage: number
@@ -58,69 +60,213 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [costPerImage, setCostPerImage] = useState<number>(1)
   const [numImages, setNumImages] = useState<number>(3)
   const [creditsLoading, setCreditsLoading] = useState<boolean>(false)
+  const [authReady, setAuthReady] = useState<boolean>(false)
   
   // Track if credits have been fetched to prevent infinite loops
   const creditsFetched = useRef(false)
   const isRefreshingCredits = useRef(false)
   const oauthCallbackProcessed = useRef(false)
   const retryCount = useRef(0)
+  const lastRefreshTime = useRef(0)
 
-  // Set up axios interceptor for auth token
+  // Token refresh synchronization
+  const isRefreshingToken = useRef(false)
+  const refreshPromise = useRef<Promise<any> | null>(null)
+
+  // Validate if a token is not expired (more conservative validation)
+  const isTokenValid = (session: Session): boolean => {
+    if (!session?.access_token || !session?.expires_in) return false
+
+    // If no created_at timestamp, assume it's valid and let backend validate
+    if (!session.created_at) {
+      console.log('⚠️ Session missing created_at timestamp, allowing through')
+      return true
+    }
+
+    // Check if token is expired (with 10 minute buffer for safety)
+    const tokenAgeMs = Date.now() - session.created_at
+    const expiryMs = session.expires_in * 1000
+    const bufferMs = 10 * 60 * 1000 // 10 minutes buffer
+
+    const isValid = tokenAgeMs < (expiryMs - bufferMs)
+
+    if (!isValid) {
+      console.log('🔒 Token validation failed:', {
+        tokenAge: Math.floor(tokenAgeMs / 1000),
+        expiresIn: session.expires_in,
+        bufferSec: bufferMs / 1000
+      })
+    }
+
+    return isValid
+  }
+
+  // Synchronized token refresh to prevent multiple simultaneous attempts
+  const refreshTokenSynchronized = async (refreshToken: string): Promise<Session | null> => {
+    // If already refreshing, wait for the existing promise
+    if (isRefreshingToken.current && refreshPromise.current) {
+      console.log('🔄 Token refresh already in progress, waiting...')
+      try {
+        return await refreshPromise.current
+      } catch (error) {
+        console.error('Failed to wait for token refresh:', error)
+        return null
+      }
+    }
+
+    // Start new refresh
+    isRefreshingToken.current = true
+    refreshPromise.current = (async () => {
+      try {
+        console.log('🔄 Starting synchronized token refresh')
+        const response = await refreshClient.post('/auth/refresh', {
+          refresh_token: refreshToken
+        })
+
+        const newSession = {
+          ...response.data.session,
+          created_at: Date.now() // Add timestamp for validation
+        }
+
+        console.log('✅ Token refreshed successfully')
+        return newSession
+      } catch (error) {
+        console.error('❌ Token refresh failed:', error)
+        throw error
+      } finally {
+        isRefreshingToken.current = false
+        refreshPromise.current = null
+      }
+    })()
+
+    return refreshPromise.current
+  }
+
+  // Validate and refresh session if needed
+  const validateAndRefreshSession = async (storedSession: Session): Promise<Session | null> => {
+    try {
+      console.log('🔍 Starting session validation...')
+
+      if (isTokenValid(storedSession)) {
+        console.log('✅ Token is valid, using stored session')
+        return storedSession
+      }
+
+      if (storedSession.refresh_token) {
+        console.log('🔄 Token expired/invalid, attempting refresh')
+        return await refreshTokenSynchronized(storedSession.refresh_token)
+      }
+
+      console.log('❌ No valid refresh token available')
+      return null
+    } catch (error) {
+      console.error('❌ Session validation failed with error:', error)
+      return null
+    }
+  }
+
+  // Set up axios interceptor for auth token - BLOCKS unauthorized requests
   useEffect(() => {
     const interceptor = axios.interceptors.request.use(
       (config) => {
-        if (session?.access_token) {
-          config.headers.Authorization = `Bearer ${session.access_token}`
+        const url = config.url || ''
+
+        // Allow auth endpoints to proceed without tokens
+        const authEndpoints = ['/auth/login', '/auth/signup', '/auth/refresh', '/auth/forgot-password', '/auth/reset-password']
+        const isAuthEndpoint = authEndpoints.some(endpoint => url.includes(endpoint))
+
+        if (isAuthEndpoint) {
+          console.log('🔓 Allowing auth endpoint without token:', url)
+          return config
         }
+
+        // Block requests that require authentication if no valid token
+        if (!session?.access_token) {
+          console.error('🚫 BLOCKING request - no access token:', url)
+          const error = new Error('No access token available')
+          error.name = 'AuthenticationError'
+          return Promise.reject(error)
+        }
+
+        // Check token validity but don't block - let the response interceptor handle refresh
+        if (!isTokenValid(session)) {
+          console.warn('⚠️ Token may be expired for request:', url, 'but allowing through for refresh')
+        }
+
+        // Add auth header for authenticated requests
+        config.headers.Authorization = `Bearer ${session.access_token}`
+        console.log('🔐 Adding auth header to request:', url)
         return config
       },
       (error) => Promise.reject(error)
     )
 
     return () => axios.interceptors.request.eject(interceptor)
-  }, [session?.access_token])
+  }, [session?.access_token, session])
 
-  // Set up response interceptor for token refresh
+  // Set up response interceptor for synchronized token refresh
   useEffect(() => {
     const interceptor = axios.interceptors.response.use(
       (response) => response,
       async (error) => {
         const originalRequest = error.config || {}
         const requestUrl: string = originalRequest.url || ''
-        
-        // Avoid attempting to refresh when the refresh endpoint itself 401s
+
+        // Avoid attempting to refresh when the refresh endpoint itself fails
         if (requestUrl.includes('/auth/refresh')) {
+          console.log('❌ Refresh endpoint failed, logging out')
+          logout()
           return Promise.reject(error)
         }
 
-        if (error.response?.status === 401 && !originalRequest._retry && session?.refresh_token) {
+        // Handle authentication errors with synchronized token refresh
+        if ((error.response?.status === 401 || error.response?.status === 403) &&
+            !originalRequest._retry &&
+            session?.refresh_token) {
+
           originalRequest._retry = true
-          
+          console.log('🔄 Auth error detected, attempting token refresh for:', requestUrl)
+
           try {
-            // Use a clean client to avoid interceptor recursion
-            const response = await refreshClient.post('/auth/refresh', {
-              refresh_token: session.refresh_token
-            })
-            
-            const newSession = response.data.session
-            setSession(newSession)
-            setUser(response.data.user)
-            
-            // Save to localStorage
-            localStorage.setItem('auth_session', JSON.stringify(newSession))
-            localStorage.setItem('auth_user', JSON.stringify(response.data.user))
-            
-            // Retry the original request with new token
-            originalRequest.headers.Authorization = `Bearer ${newSession.access_token}`
-            return axios(originalRequest)
+            // Use synchronized token refresh to prevent race conditions
+            const newSession = await refreshTokenSynchronized(session.refresh_token)
+
+            if (newSession) {
+              // Update session state
+              setSession(newSession)
+
+              // Also update user data if available
+              try {
+                const profileResponse = await refreshClient.get('/auth/profile', {
+                  headers: { Authorization: `Bearer ${newSession.access_token}` }
+                })
+                const userData = profileResponse.data
+                setUser(userData)
+                localStorage.setItem('auth_user', JSON.stringify(userData))
+              } catch (profileError) {
+                console.warn('Failed to refresh user profile:', profileError)
+              }
+
+              // Save refreshed session to localStorage
+              localStorage.setItem('auth_session', JSON.stringify(newSession))
+
+              console.log('✅ Token refreshed, retrying original request')
+
+              // Retry the original request with new token
+              originalRequest.headers.Authorization = `Bearer ${newSession.access_token}`
+              return axios(originalRequest)
+            } else {
+              throw new Error('Token refresh returned null session')
+            }
           } catch (refreshError) {
             // Refresh failed, logout user
+            console.error('❌ Token refresh failed, logging out:', refreshError)
             logout()
             toast.error('Session expired. Please log in again.')
             return Promise.reject(refreshError)
           }
         }
-        
+
         return Promise.reject(error)
       }
     )
@@ -144,12 +290,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         throw new Error('Missing required tokens in callback URL')
       }
       
-      // Create session object
+      // Create session object with timestamp
       const sessionData: Session = {
         access_token: accessToken,
         refresh_token: refreshToken,
         expires_in: parseInt(expiresIn || '3600'),
-        token_type: 'bearer'
+        token_type: 'bearer',
+        created_at: Date.now()
       }
       
       // Set session temporarily to make authenticated request
@@ -250,89 +397,127 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
       }
       
-      // Normal auth check - load stored data
+      // Normal auth check - validate stored session
+      console.log('🔄 Loading and validating stored session...')
       const storedSession = localStorage.getItem('auth_session')
       const storedUser = localStorage.getItem('auth_user')
-      
+
       if (storedSession && storedUser) {
         try {
           const sessionData = JSON.parse(storedSession)
           const userData = JSON.parse(storedUser)
-          
-          setSession(sessionData)
-          setUser(userData)
-          
-          // Try to restore credits from localStorage
-          const storedCredits = localStorage.getItem('auth_credits')
-          if (storedCredits) {
-            try {
-              const creditsData = JSON.parse(storedCredits)
-              setCredits(creditsData.credits || 0)
-              setCostPerImage(creditsData.costPerImage || 1)
-              setNumImages(creditsData.numImages || 3)
-              creditsFetched.current = true
-            } catch (error) {
-              console.error('Failed to parse stored credits:', error)
-              localStorage.removeItem('auth_credits')
+
+          console.log('📦 Found stored session, validating token...')
+
+          // Add created_at timestamp if missing (for legacy sessions)
+          if (!sessionData.created_at && sessionData.access_token) {
+            console.log('🕒 Adding timestamp to legacy session')
+            sessionData.created_at = Date.now()
+            localStorage.setItem('auth_session', JSON.stringify(sessionData))
+          }
+
+          // Validate and potentially refresh the session
+          console.log('🔍 Validating session:', {
+            hasAccessToken: !!sessionData.access_token,
+            hasRefreshToken: !!sessionData.refresh_token,
+            createdAt: sessionData.created_at,
+            expiresIn: sessionData.expires_in
+          })
+          const validSession = await validateAndRefreshSession(sessionData)
+
+          if (validSession) {
+            console.log('✅ Session validated successfully')
+            setSession(validSession)
+            setUser(userData)
+
+            // Save refreshed session if it was updated
+            if (validSession !== sessionData) {
+              localStorage.setItem('auth_session', JSON.stringify(validSession))
             }
+
+            // Try to restore credits from localStorage (but still fetch fresh data)
+            const storedCredits = localStorage.getItem('auth_credits')
+            if (storedCredits) {
+              try {
+                const creditsData = JSON.parse(storedCredits)
+                setCredits(creditsData.credits || 0)
+                setCostPerImage(creditsData.costPerImage || 1)
+                setNumImages(creditsData.numImages || 3)
+              } catch (error) {
+                console.error('Failed to parse stored credits:', error)
+                localStorage.removeItem('auth_credits')
+              }
+            }
+
+            // Mark auth as ready only when we have a valid session
+            setAuthReady(true)
+            console.log('✅ Authentication ready with valid session')
+          } else {
+            console.log('❌ Session validation failed, clearing stored data')
+            // Clear invalid session
+            localStorage.removeItem('auth_session')
+            localStorage.removeItem('auth_user')
+            localStorage.removeItem('auth_credits')
+            setSession(null)
+            setUser(null)
+            // Set auth ready even without valid session (user needs to login)
+            setAuthReady(true)
+            console.log('✅ Authentication ready (no valid session)')
           }
         } catch (error) {
           console.error('Failed to parse stored auth data:', error)
           localStorage.removeItem('auth_session')
           localStorage.removeItem('auth_user')
+          localStorage.removeItem('auth_credits')
+          setSession(null)
+          setUser(null)
+          setAuthReady(true)
+          console.log('✅ Authentication ready (error during validation)')
         }
+      } else {
+        console.log('📭 No stored session found')
+        setAuthReady(true)
+        console.log('✅ Authentication ready (no stored session)')
       }
-      
+
       setLoading(false)
+      console.log('✅ Authentication initialization complete')
     }
 
     checkForEmailConfirmation()
   }, [])
 
-  // Fetch credits when user is authenticated and credits haven't been fetched yet
+  // Fetch credits when user is authenticated and auth is ready
   useEffect(() => {
-    if (user?.id && session?.access_token && !creditsFetched.current) {
+    if (user?.id && session?.access_token && authReady && !creditsFetched.current && !isRefreshingCredits.current) {
       creditsFetched.current = true
       refreshCreditsImmediate()
     }
-  }, [user?.id, session?.access_token])
+  }, [user?.id, session?.access_token, authReady])
 
   const login = async (email: string, password: string): Promise<void> => {
     try {
       const response = await axios.post('/auth/login', { email, password })
       const { user: userData, session: sessionData } = response.data
-      
+
+      // Add timestamp for token validation
+      const sessionWithTimestamp = {
+        ...sessionData,
+        created_at: Date.now()
+      }
+
       setUser(userData)
-      setSession(sessionData)
+      setSession(sessionWithTimestamp)
       
       // Store auth in localStorage
-      localStorage.setItem('auth_session', JSON.stringify(sessionData))
+      localStorage.setItem('auth_session', JSON.stringify(sessionWithTimestamp))
       localStorage.setItem('auth_user', JSON.stringify(userData))
 
-      // If backend includes credits in login response, set them immediately
-      const loginCredits: number | undefined = response.data?.credits
-      const loginCostPerImage: number | undefined = response.data?.cost_per_image
-      const loginNumImages: number | undefined = response.data?.num_images
-
-      if (typeof loginCredits === 'number') {
-        setCredits(loginCredits)
-        if (typeof loginCostPerImage === 'number') setCostPerImage(loginCostPerImage)
-        if (typeof loginNumImages === 'number') setNumImages(loginNumImages)
-
-        // Persist credits locally
-        localStorage.setItem('auth_credits', JSON.stringify({
-          credits: loginCredits,
-          costPerImage: typeof loginCostPerImage === 'number' ? loginCostPerImage : costPerImage,
-          numImages: typeof loginNumImages === 'number' ? loginNumImages : numImages,
-        }))
-
-        // Mark as fetched to avoid an immediate duplicate refresh
-        creditsFetched.current = true
-      } else {
-        // Fallback: fetch credits immediately
-        creditsFetched.current = false
-        await refreshCreditsImmediate()
-      }
+      // Always fetch credits immediately after login to ensure UI is up to date
+      console.log('🔄 Fetching credits immediately after login...')
+      creditsFetched.current = false
+      await refreshCreditsImmediate()
+      console.log('✅ Credits fetched after login')
     } catch (error) {
       // Re-throw the original error so LoginForm can handle it
       throw error
@@ -397,32 +582,39 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }
 
   const logout = () => {
+    console.log('🚪 Logging out user')
+
     // Clear auth state
     setUser(null)
     setSession(null)
     setEmailConfirmationRequired(false)
-    
-    // Reset tracking flags
+    setAuthReady(false)
+
+    // Reset all tracking flags
     creditsFetched.current = false
     isRefreshingCredits.current = false
     oauthCallbackProcessed.current = false
     retryCount.current = 0
-    
-    
+    isRefreshingToken.current = false
+    refreshPromise.current = null
+
     // Clear localStorage
     localStorage.removeItem('auth_session')
     localStorage.removeItem('auth_user')
     localStorage.removeItem('auth_credits')
-    
+
     // Optional: Call backend logout endpoint
     if (session?.access_token) {
       axios.post('/auth/logout').catch(() => {
         // Ignore errors on logout
       })
     }
-    
+
     toast.success('Logged out successfully')
     setCredits(0)
+
+    // Reset auth ready after logout
+    setTimeout(() => setAuthReady(true), 100)
   }
 
 
@@ -482,20 +674,42 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const refreshCreditsCore = async (immediate: boolean = false): Promise<void> => {
     try {
-      if (!session?.access_token || creditsLoading) return
-      
+      console.log(`💳 refreshCreditsCore called (immediate: ${immediate})`)
+
+      if (!session?.access_token) {
+        console.error('❌ No access token available for credit refresh')
+        return
+      }
+
+      // For immediate calls (like payment success), bypass loading checks
+      if (!immediate && (creditsLoading || isRefreshingCredits.current)) {
+        console.log('⏸️ Skipping credit refresh - already in progress')
+        return
+      }
+
+      // Prevent rapid successive calls (debounce for 1 second) unless immediate
+      const now = Date.now()
+      if (!immediate && now - lastRefreshTime.current < 1000) {
+        console.log('⏸️ Skipping credit refresh - debounce')
+        return
+      }
+      lastRefreshTime.current = now
+
+      console.log('🔄 Starting credit refresh...')
       setCreditsLoading(true)
       isRefreshingCredits.current = true
-      
+
       const res = await axios.get('/auth/credits')
       const credits = res.data?.credits ?? 0
       const costPerImage = res.data?.cost_per_image ?? 1
       const numImages = res.data?.num_images ?? 3
-      
+
+      console.log('💰 Credits refreshed:', { credits, costPerImage, numImages })
+
       setCredits(credits)
       setCostPerImage(costPerImage)
       setNumImages(numImages)
-      
+
       // Store credits in localStorage for persistence
       localStorage.setItem('auth_credits', JSON.stringify({
         credits,
@@ -559,6 +773,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     user,
     session,
     loading,
+    authReady,
     emailConfirmationRequired,
     credits,
     costPerImage,

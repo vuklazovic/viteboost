@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -45,14 +45,17 @@ const Generate = () => {
   const [recentGenerations, setRecentGenerations] = useState<any[]>([]);
 
   const queryClient = useQueryClient();
-  const { user, credits, refreshCredits } = useAuth();
+  const { user, session, credits, refreshCreditsImmediate, loading, authReady } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Fetch generations for smart initial state
   const { data: generations = [], isLoading } = useQuery({
     queryKey: ['generations'],
     queryFn: getUserGenerations,
-    refetchOnWindowFocus: false
+    enabled: !!user && !!session?.access_token && authReady && !loading, // Wait for auth and loading complete
+    refetchOnWindowFocus: false,
+    retry: 1, // Reduce retries to prevent spam
+    staleTime: 30000 // Cache for 30 seconds to reduce requests
   });
 
   // Smart initial state logic
@@ -69,20 +72,39 @@ const Generate = () => {
   // Handle payment success feedback
   useEffect(() => {
     const paymentSuccess = searchParams.get('payment');
-    if (paymentSuccess === 'success') {
-      // Refresh credits to get updated balance
-      refreshCredits();
+    if (paymentSuccess === 'success' && user && session?.access_token && authReady && !loading) {
+      console.log('🎉 Payment success detected, refreshing credits...');
 
-      // Show success message
-      toast.success('🎉 Payment successful! Your subscription is now active and your credits have been updated.');
+      // Clear any cached credits to force fresh fetch
+      localStorage.removeItem('auth_credits');
 
-      // Remove payment parameter from URL
+      // Wait a bit for webhook to process, then refresh credits with retry
+      const refreshCreditsWithRetry = async (attempt = 1, maxAttempts = 3) => {
+        try {
+          await refreshCreditsImmediate();
+          console.log('✅ Credits refreshed after payment');
+          toast.success('🎉 Payment successful! Your subscription is now active and your credits have been updated.');
+        } catch (error) {
+          console.error(`❌ Failed to refresh credits (attempt ${attempt}):`, error);
+
+          if (attempt < maxAttempts) {
+            console.log(`🔄 Retrying credit refresh in 3 seconds (attempt ${attempt + 1}/${maxAttempts})`);
+            setTimeout(() => refreshCreditsWithRetry(attempt + 1, maxAttempts), 3000);
+          } else {
+            toast.error('Payment successful, but failed to refresh credits. Please refresh the page.');
+          }
+        }
+      };
+
+      setTimeout(() => refreshCreditsWithRetry(), 2000); // Wait 2 seconds for webhook processing
+
+      // Remove payment parameter from URL immediately to prevent re-runs
       const newSearchParams = new URLSearchParams(searchParams);
       newSearchParams.delete('payment');
       newSearchParams.delete('session_id');
       setSearchParams(newSearchParams, { replace: true });
     }
-  }, [searchParams, setSearchParams, refreshCredits]);
+  }, [searchParams.get('payment'), user, session?.access_token, authReady, loading]); // Wait for auth to be ready
 
   // Handle new images generated
   const handleImagesGenerated = (images: GeneratedImage[], uploadId: string) => {
