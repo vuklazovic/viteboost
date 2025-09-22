@@ -31,6 +31,7 @@ interface AuthContextType {
   refreshCredits: () => Promise<void>
   refreshCreditsImmediate: () => Promise<void>
   updateCredits: (newCredits: number) => void
+  updateNumImages: (newNumImages: number) => void
   login: (email: string, password: string) => Promise<void>
   signup: (email: string, password: string) => Promise<{ requiresEmailConfirmation: boolean }>
   loginWithGoogle: () => Promise<void>
@@ -749,7 +750,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       toast.error('Received invalid credit balance from server')
       return
     }
-    
+
     setCredits(newCredits)
     // Update localStorage as well
     const storedCredits = localStorage.getItem('auth_credits')
@@ -769,6 +770,33 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }
 
+  const updateNumImages = (newNumImages: number) => {
+    // Validate the numImages value
+    if (typeof newNumImages !== 'number' || newNumImages < 1 || newNumImages > 100 || !isFinite(newNumImages)) {
+      console.error('Invalid numImages value received:', newNumImages)
+      toast.error('Invalid number of images selected')
+      return
+    }
+
+    setNumImages(newNumImages)
+    // Update localStorage as well
+    const storedCredits = localStorage.getItem('auth_credits')
+    if (storedCredits) {
+      try {
+        const creditsData = JSON.parse(storedCredits)
+        creditsData.numImages = newNumImages
+        localStorage.setItem('auth_credits', JSON.stringify(creditsData))
+      } catch (error) {
+        // If parsing fails, create new credits data
+        localStorage.setItem('auth_credits', JSON.stringify({
+          credits,
+          costPerImage,
+          numImages: newNumImages
+        }))
+      }
+    }
+  }
+
   const value: AuthContextType = {
     user,
     session,
@@ -782,6 +810,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     refreshCredits,
     refreshCreditsImmediate,
     updateCredits,
+    updateNumImages,
     login,
     signup,
     loginWithGoogle,

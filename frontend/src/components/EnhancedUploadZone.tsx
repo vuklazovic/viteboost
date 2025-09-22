@@ -21,13 +21,15 @@ import {
   RotateCcw,
   Play,
   Pause,
-  Trash2
+  Trash2,
+  Settings
 } from "lucide-react";
 import { useDropzone } from 'react-dropzone';
 import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { uploadAndGenerateImages, GeneratedImage } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
+import ImageQuantitySelector from './ImageQuantitySelector';
 
 interface UploadItem {
   id: string;
@@ -53,11 +55,12 @@ const EnhancedUploadZone = ({
   const [uploadQueue, setUploadQueue] = useState<UploadItem[]>([]);
   const [urlInput, setUrlInput] = useState('');
   const [isUrlModalOpen, setIsUrlModalOpen] = useState(false);
+  const [showQuantitySelector, setShowQuantitySelector] = useState(false);
   const [dragCounter, setDragCounter] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const urlInputRef = useRef<HTMLInputElement>(null);
 
-  const { refreshCredits, refreshCreditsImmediate, updateCredits, costPerImage, numImages, credits } = useAuth();
+  const { refreshCredits, refreshCreditsImmediate, updateCredits, updateNumImages, costPerImage, numImages, credits } = useAuth();
 
   // Generate images mutation
   const generateImagesMutation = useMutation({
@@ -370,13 +373,35 @@ const EnhancedUploadZone = ({
               <Link className="h-4 w-4" />
             </Button>
             <Button
-              onClick={() => navigator.clipboard && toast.info('📋 Paste an image anywhere!')}
+              onClick={() => {
+                if (navigator.clipboard) {
+                  toast.info('📋 Paste an image anywhere!');
+                }
+              }}
               variant="outline"
               size="sm"
             >
               <Clipboard className="h-4 w-4" />
             </Button>
+            <Button
+              onClick={() => setShowQuantitySelector(!showQuantitySelector)}
+              variant="outline"
+              size="sm"
+              className={showQuantitySelector ? "bg-primary/10" : ""}
+            >
+              <Settings className="h-4 w-4" />
+            </Button>
           </div>
+
+          {/* Quantity Selector for Compact View */}
+          {showQuantitySelector && (
+            <ImageQuantitySelector
+              value={numImages}
+              onChange={updateNumImages}
+              showCostBreakdown={true}
+              className="mt-4"
+            />
+          )}
 
           {/* Queue Items */}
           {uploadQueue.length > 0 && (
@@ -527,7 +552,9 @@ const EnhancedUploadZone = ({
 
               <Button
                 onClick={() => {
-                  navigator.clipboard && toast.info('📋 Paste an image anywhere on this page!');
+                  if (navigator.clipboard) {
+                    toast.info('📋 Paste an image anywhere on this page!');
+                  }
                 }}
                 variant="outline"
                 size="lg"
@@ -554,6 +581,15 @@ const EnhancedUploadZone = ({
             </div>
           </div>
         </div>
+      </Card>
+
+      {/* Image Quantity Selector */}
+      <Card className="p-6">
+        <ImageQuantitySelector
+          value={numImages}
+          onChange={updateNumImages}
+          showCostBreakdown={true}
+        />
       </Card>
 
       {/* Upload Queue */}

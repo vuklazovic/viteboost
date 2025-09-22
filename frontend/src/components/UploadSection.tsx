@@ -9,6 +9,7 @@ import { useMutation } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { uploadAndGenerateImages, GeneratedImage } from '@/lib/api';
 import { useAuth } from '@/contexts/AuthContext';
+import ImageQuantitySelector from './ImageQuantitySelector';
 
 interface UploadSectionProps {
   onImagesGenerated?: (images: GeneratedImage[]) => void;
@@ -19,7 +20,7 @@ const UploadSection = ({ onImagesGenerated }: UploadSectionProps) => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
   const [fileError, setFileError] = useState<string | null>(null);
-  const { refreshCredits, refreshCreditsImmediate, updateCredits, costPerImage, numImages, credits } = useAuth();
+  const { refreshCredits, refreshCreditsImmediate, updateCredits, updateNumImages, costPerImage, numImages, credits } = useAuth();
 
   // Generate images mutation
   const generateImagesMutation = useMutation({
@@ -311,9 +312,17 @@ const UploadSection = ({ onImagesGenerated }: UploadSectionProps) => {
                     </div>
                   ) : (
                     <div className="space-y-6">
-                      <Button 
-                        variant="cta" 
-                        size="lg" 
+                      {/* Image Quantity Selector */}
+                      <ImageQuantitySelector
+                        value={numImages}
+                        onChange={updateNumImages}
+                        disabled={generateImagesMutation.isPending}
+                        showCostBreakdown={true}
+                      />
+
+                      <Button
+                        variant="cta"
+                        size="lg"
                         className="text-xl px-12 py-6"
                         onClick={handleGenerate}
                         disabled={generateImagesMutation.isPending || (credits ?? 0) < ((costPerImage || 1) * (numImages || 1))}
