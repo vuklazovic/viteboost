@@ -254,29 +254,29 @@ const GenerationPanel = ({
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="w-full sm:max-w-4xl p-0 overflow-hidden">
+      <SheetContent className="w-full sm:max-w-4xl p-0 overflow-hidden" side="right">
         <div className="h-full flex flex-col">
           {/* Header */}
-          <SheetHeader className="p-6 border-b bg-background/95 backdrop-blur-sm">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
+          <SheetHeader className="p-4 sm:p-6 border-b bg-background/95 backdrop-blur-sm">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
                 <Button
                   onClick={onClose}
                   variant="ghost"
                   size="sm"
-                  className="h-8 w-8 p-0"
+                  className="h-8 w-8 p-0 flex-shrink-0"
                 >
                   <X className="h-4 w-4" />
                 </Button>
-                <div>
-                  <SheetTitle className="text-xl">
+                <div className="min-w-0 flex-1">
+                  <SheetTitle className="text-lg sm:text-xl truncate">
                     {generation?.original_filename || 'Loading...'}
                   </SheetTitle>
                   {generation && (
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 text-sm text-muted-foreground mt-1">
                       <div className="flex items-center gap-1">
                         <Calendar className="h-4 w-4" />
-                        <span>Generated {formatDate(generation.created_at)}</span>
+                        <span className="truncate">Generated {formatDate(generation.created_at)}</span>
                       </div>
                       <div className="flex items-center gap-1">
                         <ImageIcon className="h-4 w-4" />
@@ -289,12 +289,12 @@ const GenerationPanel = ({
 
               {/* Header Actions */}
               {generation && (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 sm:gap-2">
                   <Button
                     onClick={() => onToggleFavorite?.(generationId)}
                     variant="ghost"
                     size="sm"
-                    className={isFavorite ? 'text-yellow-500 hover:text-yellow-600' : ''}
+                    className={`h-8 w-8 sm:h-10 sm:w-10 p-0 ${isFavorite ? 'text-yellow-500 hover:text-yellow-600' : ''}`}
                   >
                     {isFavorite ? <Star className="h-4 w-4 fill-current" /> : <StarOff className="h-4 w-4" />}
                   </Button>
@@ -302,6 +302,7 @@ const GenerationPanel = ({
                     onClick={() => copyToClipboard(generationId, 'Generation ID')}
                     variant="ghost"
                     size="sm"
+                    className="h-8 w-8 sm:h-10 sm:w-10 p-0"
                   >
                     <Copy className="h-4 w-4" />
                   </Button>
@@ -309,9 +310,11 @@ const GenerationPanel = ({
                     onClick={handleDownloadAll}
                     variant="outline"
                     size="sm"
+                    className="gap-1 sm:gap-2 px-2 sm:px-4"
                   >
-                    <Download className="h-4 w-4 mr-2" />
-                    Download All
+                    <Download className="h-4 w-4" />
+                    <span className="hidden sm:inline">Download All</span>
+                    <span className="sm:hidden">All</span>
                   </Button>
                 </div>
               )}
@@ -320,7 +323,7 @@ const GenerationPanel = ({
 
           {/* Content */}
           <ScrollArea className="flex-1">
-            <div className="p-6">
+            <div className="p-4 sm:p-6">
               {isLoading && (
                 <div className="space-y-6">
                   <Skeleton className="h-8 w-64" />
@@ -394,9 +397,9 @@ const GenerationPanel = ({
                                   )}
                                   variant="secondary"
                                   size="sm"
-                                  className="absolute left-4 top-1/2 -translate-y-1/2 h-12 w-12 p-0 bg-black/50 hover:bg-black/70 text-white border-0 backdrop-blur-sm"
+                                  className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 h-10 w-10 sm:h-12 sm:w-12 p-0 bg-black/50 hover:bg-black/70 text-white border-0 backdrop-blur-sm z-10"
                                 >
-                                  <ChevronLeft className="h-6 w-6" />
+                                  <ChevronLeft className="h-4 w-4 sm:h-6 sm:w-6" />
                                 </Button>
                                 <Button
                                   onClick={() => setSelectedImageIndex(
@@ -404,16 +407,16 @@ const GenerationPanel = ({
                                   )}
                                   variant="secondary"
                                   size="sm"
-                                  className="absolute right-4 top-1/2 -translate-y-1/2 h-12 w-12 p-0 bg-black/50 hover:bg-black/70 text-white border-0 backdrop-blur-sm"
+                                  className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 h-10 w-10 sm:h-12 sm:w-12 p-0 bg-black/50 hover:bg-black/70 text-white border-0 backdrop-blur-sm z-10"
                                 >
-                                  <ChevronRight className="h-6 w-6" />
+                                  <ChevronRight className="h-4 w-4 sm:h-6 sm:w-6" />
                                 </Button>
                               </>
                             )}
 
                             {/* Image Counter */}
-                            <div className="absolute top-4 left-4">
-                              <Badge className="bg-black/50 text-white border-0 backdrop-blur-sm">
+                            <div className="absolute top-2 left-2 sm:top-4 sm:left-4">
+                              <Badge className="bg-black/50 text-white border-0 backdrop-blur-sm text-xs sm:text-sm">
                                 {selectedImageIndex + 1} of {generation.generated_images.length}
                               </Badge>
                             </div>
@@ -423,17 +426,17 @@ const GenerationPanel = ({
                               onClick={() => setSelectedImageIndex(null)}
                               variant="secondary"
                               size="sm"
-                              className="absolute top-4 right-4 h-10 w-10 p-0 bg-black/50 hover:bg-black/70 text-white border-0 backdrop-blur-sm"
+                              className="absolute top-2 right-2 sm:top-4 sm:right-4 h-8 w-8 sm:h-10 sm:w-10 p-0 bg-black/50 hover:bg-black/70 text-white border-0 backdrop-blur-sm z-10"
                             >
-                              <X className="h-5 w-5" />
+                              <X className="h-4 w-4 sm:h-5 sm:w-5" />
                             </Button>
                           </div>
                         </div>
                       </Card>
 
                       {/* Current Image Actions */}
-                      <Card className="p-6">
-                        <div className="flex items-center justify-between">
+                      <Card className="p-4 sm:p-6">
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                           <div className="flex items-center gap-4">
                             <div>
                               <h4 className="font-semibold text-lg">
@@ -445,7 +448,7 @@ const GenerationPanel = ({
                             </div>
                           </div>
 
-                          <div className="flex gap-3">
+                          <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
                             <Button
                               onClick={() => handleDownload(
                                 generation.generated_images[selectedImageIndex].filename,
@@ -453,10 +456,11 @@ const GenerationPanel = ({
                               )}
                               disabled={downloadingId === generation.generated_images[selectedImageIndex].filename}
                               variant="outline"
-                              className="gap-2"
+                              className="gap-2 w-full sm:w-auto"
                             >
                               <Download className="h-4 w-4" />
-                              {downloadingId === generation.generated_images[selectedImageIndex].filename ? 'Downloading...' : 'Download'}
+                              <span className="hidden sm:inline">{downloadingId === generation.generated_images[selectedImageIndex].filename ? 'Downloading...' : 'Download'}</span>
+                              <span className="sm:hidden">{downloadingId === generation.generated_images[selectedImageIndex].filename ? 'Downloading...' : 'Download'}</span>
                             </Button>
 
                             {/* More Like This Button */}
@@ -467,26 +471,27 @@ const GenerationPanel = ({
                               )}
                               disabled={moreLikeThisMutation.isPending || (credits ?? 0) < ((costPerImage || 1) * (numImages || 1))}
                               variant="default"
-                              className="gap-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 disabled:from-gray-400 disabled:to-gray-500"
+                              className="gap-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 disabled:from-gray-400 disabled:to-gray-500 w-full sm:w-auto"
                             >
                               {moreLikeThisMutation.isPending ? (
                                 <RotateCcw className="h-4 w-4 animate-spin" />
                               ) : (
                                 <Sparkles className="h-4 w-4" />
                               )}
-                              {moreLikeThisMutation.isPending ? 'Generating...' : 'More Like This'}
+                              <span className="hidden sm:inline">{moreLikeThisMutation.isPending ? 'Generating...' : 'More Like This'}</span>
+                              <span className="sm:hidden">{moreLikeThisMutation.isPending ? 'Generating...' : 'More Like This'}</span>
                             </Button>
                           </div>
                         </div>
                       </Card>
 
                       {/* Thumbnail Strip */}
-                      <div className="flex gap-3 justify-center overflow-x-auto pb-2">
+                      <div className="flex gap-2 sm:gap-3 justify-center overflow-x-auto pb-2 px-2">
                         {generation.generated_images.map((image, index) => (
                           <button
                             key={image.filename}
                             onClick={() => setSelectedImageIndex(index)}
-                            className={`relative flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-all ${
+                            className={`relative flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden border-2 transition-all ${
                               index === selectedImageIndex
                                 ? 'border-primary ring-2 ring-primary/20'
                                 : 'border-border hover:border-primary/50'
@@ -506,7 +511,7 @@ const GenerationPanel = ({
                     </div>
                   ) : (
                     /* Grid View */
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
                       {generation.generated_images.map((image, index) => {
                         const styleInfo = getStyleInfo(image.style, index);
                         return (
