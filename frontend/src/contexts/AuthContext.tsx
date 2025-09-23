@@ -614,6 +614,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     toast.success('Logged out successfully')
     setCredits(0)
 
+    // Navigate to home page by setting window location directly
+    window.location.href = '/'
+
     // Reset auth ready after logout
     setTimeout(() => setAuthReady(true), 100)
   }

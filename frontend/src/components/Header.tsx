@@ -31,6 +31,25 @@ const Header = () => {
     }
   };
 
+  const handleSectionNavigation = (sectionId: string) => {
+    if (window.location.pathname === '/') {
+      // If on home page, scroll to section
+      const element = document.getElementById(sectionId);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
+    } else {
+      // If on another page, navigate to home and scroll to section
+      navigate('/', { replace: false });
+      setTimeout(() => {
+        const element = document.getElementById(sectionId);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+    }
+  };
+
   return (
     <header className="border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
@@ -48,15 +67,24 @@ const Header = () => {
           >
             Generate
           </button>
-          <a href="#features" className="text-muted-foreground hover:text-foreground transition-colors">
+          <button
+            onClick={() => handleSectionNavigation('features')}
+            className="text-muted-foreground hover:text-foreground transition-colors"
+          >
             Features
-          </a>
-          <a href="#pricing" className="text-muted-foreground hover:text-foreground transition-colors">
+          </button>
+          <button
+            onClick={() => handleSectionNavigation('pricing')}
+            className="text-muted-foreground hover:text-foreground transition-colors"
+          >
             Pricing
-          </a>
-          <a href="#examples" className="text-muted-foreground hover:text-foreground transition-colors">
+          </button>
+          <button
+            onClick={() => handleSectionNavigation('examples')}
+            className="text-muted-foreground hover:text-foreground transition-colors"
+          >
             Examples
-          </a>
+          </button>
         </nav>
         
         <div className="flex items-center gap-3">
