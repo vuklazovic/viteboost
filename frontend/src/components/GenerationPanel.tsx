@@ -254,10 +254,10 @@ const GenerationPanel = ({
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="w-full sm:max-w-4xl p-0 overflow-hidden" side="right">
+      <SheetContent className="!w-full !max-w-none md:!max-w-3xl lg:!max-w-4xl p-0" side="right">
         <div className="h-full flex flex-col">
           {/* Header */}
-          <SheetHeader className="p-4 sm:p-6 border-b bg-background/95 backdrop-blur-sm">
+          <SheetHeader className="p-3 sm:p-4 md:p-6 border-b bg-background/95 backdrop-blur-sm">
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
                 <Button
@@ -322,8 +322,8 @@ const GenerationPanel = ({
           </SheetHeader>
 
           {/* Content */}
-          <ScrollArea className="flex-1">
-            <div className="p-4 sm:p-6">
+          <ScrollArea className="flex-1 w-full">
+            <div className="p-2 sm:p-4 md:p-6 w-full max-w-full box-border">
               {isLoading && (
                 <div className="space-y-6">
                   <Skeleton className="h-8 w-64" />
@@ -362,7 +362,7 @@ const GenerationPanel = ({
               )}
 
               {generation && (
-                <div className="space-y-8">
+                <div className="space-y-8 w-full">
 
                   {/* Gallery Header */}
                   <div className="flex items-center justify-between mb-6">
@@ -379,13 +379,13 @@ const GenerationPanel = ({
                     /* Lightbox View */
                     <div className="space-y-6">
                       {/* Current Image Display */}
-                      <Card className="overflow-hidden bg-black">
-                        <div className="relative">
-                          <div className="aspect-square md:aspect-video max-h-[70vh] relative overflow-hidden">
+                      <div className="relative bg-black mx-1 sm:mx-2 rounded-lg overflow-hidden">
+                        {/* Mobile responsive image container */}
+                        <div className="relative w-full max-w-[calc(100vw-16px)] sm:max-w-[calc(100vw-32px)] max-h-[min(60vh,calc(100dvh-200px))] md:h-auto lg:aspect-video md:max-h-[70vh] flex items-center justify-center">
                             <img
                               src={generation.generated_images[selectedImageIndex].url}
                               alt={`Generated image ${selectedImageIndex + 1}`}
-                              className="w-full h-full object-contain"
+                              className="w-full h-auto max-h-full object-contain"
                             />
 
                             {/* Navigation Arrows */}
@@ -397,9 +397,9 @@ const GenerationPanel = ({
                                   )}
                                   variant="secondary"
                                   size="sm"
-                                  className="absolute left-2 sm:left-4 top-1/2 -translate-y-1/2 h-10 w-10 sm:h-12 sm:w-12 p-0 bg-black/50 hover:bg-black/70 text-white border-0 backdrop-blur-sm z-10"
+                                  className="absolute left-1 sm:left-2 md:left-4 top-1/2 -translate-y-1/2 h-8 w-8 sm:h-9 sm:w-9 md:h-10 md:w-10 p-0 bg-black/80 hover:bg-black/95 text-white border-0 backdrop-blur-sm z-50 shadow-lg"
                                 >
-                                  <ChevronLeft className="h-4 w-4 sm:h-6 sm:w-6" />
+                                  <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5" />
                                 </Button>
                                 <Button
                                   onClick={() => setSelectedImageIndex(
@@ -407,9 +407,9 @@ const GenerationPanel = ({
                                   )}
                                   variant="secondary"
                                   size="sm"
-                                  className="absolute right-2 sm:right-4 top-1/2 -translate-y-1/2 h-10 w-10 sm:h-12 sm:w-12 p-0 bg-black/50 hover:bg-black/70 text-white border-0 backdrop-blur-sm z-10"
+                                  className="absolute right-1 sm:right-2 md:right-4 top-1/2 -translate-y-1/2 h-8 w-8 sm:h-9 sm:w-9 md:h-10 md:w-10 p-0 bg-black/80 hover:bg-black/95 text-white border-0 backdrop-blur-sm z-50 shadow-lg"
                                 >
-                                  <ChevronRight className="h-4 w-4 sm:h-6 sm:w-6" />
+                                  <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5" />
                                 </Button>
                               </>
                             )}
@@ -426,29 +426,28 @@ const GenerationPanel = ({
                               onClick={() => setSelectedImageIndex(null)}
                               variant="secondary"
                               size="sm"
-                              className="absolute top-2 right-2 sm:top-4 sm:right-4 h-8 w-8 sm:h-10 sm:w-10 p-0 bg-black/50 hover:bg-black/70 text-white border-0 backdrop-blur-sm z-10"
+                              className="absolute top-2 right-2 sm:top-4 sm:right-4 h-8 w-8 sm:h-10 sm:w-10 p-0 bg-black/50 hover:bg-black/70 text-white border-0 backdrop-blur-sm z-30"
                             >
                               <X className="h-4 w-4 sm:h-5 sm:w-5" />
                             </Button>
-                          </div>
                         </div>
-                      </Card>
+                      </div>
 
                       {/* Current Image Actions */}
-                      <Card className="p-4 sm:p-6">
-                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                          <div className="flex items-center gap-4">
+                      <div className="p-3 sm:p-4 md:p-6 mx-1 sm:mx-2 bg-card rounded-lg border max-w-[calc(100vw-16px)] sm:max-w-[calc(100vw-32px)] box-border">
+                        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between w-full max-w-full">
+                          <div className="flex items-center gap-3">
                             <div>
-                              <h4 className="font-semibold text-lg">
+                              <h4 className="font-semibold text-base md:text-lg">
                                 {getStyleInfo(generation.generated_images[selectedImageIndex].style, selectedImageIndex).name} Style
                               </h4>
-                              <p className="text-muted-foreground">
+                              <p className="text-sm text-muted-foreground">
                                 Variation #{selectedImageIndex + 1}
                               </p>
                             </div>
                           </div>
 
-                          <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
+                          <div className="flex flex-col gap-2 md:flex-row md:gap-3 w-full md:w-auto max-w-full">
                             <Button
                               onClick={() => handleDownload(
                                 generation.generated_images[selectedImageIndex].filename,
@@ -456,11 +455,12 @@ const GenerationPanel = ({
                               )}
                               disabled={downloadingId === generation.generated_images[selectedImageIndex].filename}
                               variant="outline"
-                              className="gap-2 w-full sm:w-auto"
+                              className="gap-2 w-full md:w-auto text-sm"
                             >
-                              <Download className="h-4 w-4" />
-                              <span className="hidden sm:inline">{downloadingId === generation.generated_images[selectedImageIndex].filename ? 'Downloading...' : 'Download'}</span>
-                              <span className="sm:hidden">{downloadingId === generation.generated_images[selectedImageIndex].filename ? 'Downloading...' : 'Download'}</span>
+                              <Download className="h-4 w-4 shrink-0" />
+                              <span className="truncate">
+                                {downloadingId === generation.generated_images[selectedImageIndex].filename ? 'Downloading...' : 'Download'}
+                              </span>
                             </Button>
 
                             {/* More Like This Button */}
@@ -471,22 +471,23 @@ const GenerationPanel = ({
                               )}
                               disabled={moreLikeThisMutation.isPending || (credits ?? 0) < ((costPerImage || 1) * (numImages || 1))}
                               variant="default"
-                              className="gap-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 disabled:from-gray-400 disabled:to-gray-500 w-full sm:w-auto"
+                              className="gap-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 disabled:from-gray-400 disabled:to-gray-500 w-full md:w-auto text-sm"
                             >
                               {moreLikeThisMutation.isPending ? (
-                                <RotateCcw className="h-4 w-4 animate-spin" />
+                                <RotateCcw className="h-4 w-4 animate-spin shrink-0" />
                               ) : (
-                                <Sparkles className="h-4 w-4" />
+                                <Sparkles className="h-4 w-4 shrink-0" />
                               )}
-                              <span className="hidden sm:inline">{moreLikeThisMutation.isPending ? 'Generating...' : 'More Like This'}</span>
-                              <span className="sm:hidden">{moreLikeThisMutation.isPending ? 'Generating...' : 'More Like This'}</span>
+                              <span className="truncate">
+                                {moreLikeThisMutation.isPending ? 'Generating...' : 'More Like This'}
+                              </span>
                             </Button>
                           </div>
                         </div>
-                      </Card>
+                      </div>
 
                       {/* Thumbnail Strip */}
-                      <div className="flex gap-2 sm:gap-3 justify-center overflow-x-auto pb-2 px-2">
+                      <div className="flex gap-2 sm:gap-3 justify-center overflow-x-auto pb-2 px-2 sm:px-4 md:px-6">
                         {generation.generated_images.map((image, index) => (
                           <button
                             key={image.filename}
@@ -511,20 +512,20 @@ const GenerationPanel = ({
                     </div>
                   ) : (
                     /* Grid View */
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-3 md:gap-4 px-2 sm:px-4 w-full max-w-full box-border">
                       {generation.generated_images.map((image, index) => {
                         const styleInfo = getStyleInfo(image.style, index);
                         return (
                           <Card
                             key={image.filename}
-                            className="group overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer"
+                            className="group overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer w-full max-w-full"
                             onClick={() => setSelectedImageIndex(index)}
                           >
-                            <div className="aspect-square relative overflow-hidden">
+                            <div className="h-32 sm:h-auto sm:aspect-square relative overflow-hidden">
                               <img
                                 src={image.url}
                                 alt={`Generated image ${index + 1}`}
-                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                                 loading="lazy"
                               />
 
@@ -532,14 +533,14 @@ const GenerationPanel = ({
                               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
                               {/* Style Badge */}
-                              <div className="absolute top-3 left-3">
-                                <Badge className="bg-black/50 text-white border-0 backdrop-blur-sm text-xs">
+                              <div className="absolute top-1 left-1 sm:top-2 sm:left-2 md:top-3 md:left-3">
+                                <Badge className="bg-black/50 text-white border-0 backdrop-blur-sm text-xs max-w-full truncate">
                                   {styleInfo.icon} {styleInfo.name}
                                 </Badge>
                               </div>
 
                               {/* Index */}
-                              <div className="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                              <div className="absolute bottom-1 right-1 sm:bottom-2 sm:right-2 md:bottom-3 md:right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                                 <div className="bg-black/50 backdrop-blur-sm text-white text-xs px-2 py-1 rounded-full font-medium">
                                   #{index + 1}
                                 </div>

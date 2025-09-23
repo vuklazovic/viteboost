@@ -89,18 +89,34 @@ const Header = () => {
         
         <div className="flex items-center gap-3">
           {isAuthenticated && (
-            <div
-              className="hidden sm:flex items-center gap-2 rounded-full border border-border px-3 py-1 text-sm text-foreground"
-              title="Your available credits"
-            >
-              {creditsLoading ? (
-                <Loader2 className="h-4 w-4 text-primary animate-spin" />
-              ) : (
-                <Zap className="h-4 w-4 text-primary" />
-              )}
-              <span>{creditsLoading ? '...' : credits}</span>
-              <span className="text-muted-foreground">credits</span>
-            </div>
+            <>
+              {/* Compact credits for mobile */}
+              <div
+                className="flex sm:hidden items-center gap-1 rounded-full border border-border px-2 py-0.5 text-xs text-foreground"
+                title="Your available credits"
+              >
+                {creditsLoading ? (
+                  <Loader2 className="h-3 w-3 text-primary animate-spin" />
+                ) : (
+                  <Zap className="h-3 w-3 text-primary" />
+                )}
+                <span>{creditsLoading ? '…' : credits}</span>
+              </div>
+
+              {/* Full credits pill for >= sm */}
+              <div
+                className="hidden sm:flex items-center gap-2 rounded-full border border-border px-3 py-1 text-sm text-foreground"
+                title="Your available credits"
+              >
+                {creditsLoading ? (
+                  <Loader2 className="h-4 w-4 text-primary animate-spin" />
+                ) : (
+                  <Zap className="h-4 w-4 text-primary" />
+                )}
+                <span>{creditsLoading ? '...' : credits}</span>
+                <span className="text-muted-foreground">credits</span>
+              </div>
+            </>
           )}
           {isAuthenticated ? (
             <DropdownMenu>

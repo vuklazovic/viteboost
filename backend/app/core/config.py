@@ -16,14 +16,20 @@ class Settings:
     API_HOST: str = "127.0.0.1"
     API_PORT: int = 8000
     
-    # CORS Configuration
+    # CORS Configuration (can be overridden via CORS_ALLOWED_ORIGINS env, comma-separated)
+    # Defaults cover common Vite dev ports and localhost variants.
     ALLOWED_ORIGINS: list = [
         "http://localhost:8080",
         "http://localhost:8081",
         "http://localhost:8082",
         "http://127.0.0.1:8080",
         "http://127.0.0.1:8081",
-        "http://127.0.0.1:8082"
+        "http://127.0.0.1:8082",
+        # Vite default and preview ports
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:4176",
+        "http://127.0.0.1:4176",
     ]
     ALLOWED_METHODS: list = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
     ALLOWED_HEADERS: list = ["*"]
@@ -36,7 +42,7 @@ class Settings:
     ALLOWED_EXTENSIONS: set = {".jpg", ".jpeg", ".png", ".webp"}
     
     # Frontend URL
-    FRONTEND_URL: str = "http://localhost:8080"
+    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "https://vibeboost.online")
     
     # Credits Configuration
     INITIAL_CREDITS: int = int(os.getenv("INITIAL_CREDITS", "100"))
@@ -97,5 +103,16 @@ class Settings:
         # Create directories if they don't exist
         self.UPLOAD_DIR.mkdir(exist_ok=True)
         self.GENERATED_DIR.mkdir(exist_ok=True)
+
+        # Allow overriding CORS origins from env (comma-separated)
+        cors_env = os.getenv("CORS_ALLOWED_ORIGINS") or os.getenv("ALLOWED_ORIGINS")
+        if cors_env:
+            parsed = [o.strip() for o in cors_env.split(",") if o.strip()]
+            if parsed:
+                self.ALLOWED_ORIGINS = parsed
+
+        # Ensure FRONTEND_URL is included if set and not already present
+        if self.FRONTEND_URL and self.FRONTEND_URL not in self.ALLOWED_ORIGINS:
+            self.ALLOWED_ORIGINS.append(self.FRONTEND_URL)
 
 settings = Settings()

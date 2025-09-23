@@ -98,8 +98,8 @@ const ImageGallery = ({ images }: ImageGalleryProps) => {
   }
 
   return (
-    <section className="py-16 bg-gradient-secondary" data-section="results">
-      <div className="container mx-auto px-4">
+    <section className="py-8 md:py-16 bg-gradient-secondary scroll-mt-24" data-section="results">
+      <div className="container mx-auto px-3 md:px-4">
         {/* Header */}
         <div className="text-center mb-12">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-full text-sm font-medium text-primary mb-4">
@@ -117,20 +117,20 @@ const ImageGallery = ({ images }: ImageGalleryProps) => {
         </div>
 
         {/* Gallery Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6 mb-8 md:mb-12">
           {images.map((image, index) => {
             const styleInfo = getStyleInfo(image.style, index);
             return (
-              <Card 
-                key={image.filename} 
-                className="group overflow-hidden shadow-medium hover:shadow-strong transition-all duration-500 hover:-translate-y-2 border-0"
+              <Card
+                key={image.filename}
+                className="group overflow-hidden shadow-medium hover:shadow-strong transition-all duration-500 hover:-translate-y-2 border-0 w-full"
               >
                 {/* Image Container */}
                 <div className="aspect-square relative overflow-hidden">
                   <img
                     src={image.url}
                     alt={`AI Generated ${image.style}`}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    className="w-full h-full object-cover object-center transition-transform duration-500 group-hover:scale-110"
                     loading="lazy"
                   />
                   
@@ -138,28 +138,28 @@ const ImageGallery = ({ images }: ImageGalleryProps) => {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   
                   {/* Quick Actions Overlay */}
-                  <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-all duration-300">
-                    <div className="flex gap-2">
+                  <div className="absolute top-2 right-2 md:top-4 md:right-4 opacity-0 group-hover:opacity-100 transition-all duration-300">
+                    <div className="flex gap-1 md:gap-2">
                       <Button
                         size="sm"
                         variant="secondary"
-                        className="h-8 w-8 p-0 bg-white/90 hover:bg-white shadow-medium"
+                        className="h-6 w-6 md:h-8 md:w-8 p-0 bg-white/90 hover:bg-white shadow-medium"
                         onClick={() => window.open(image.url, '_blank')}
                       >
-                        <ExternalLink className="h-3 w-3" />
+                        <ExternalLink className="h-2.5 w-2.5 md:h-3 md:w-3" />
                       </Button>
                     </div>
                   </div>
 
                   {/* Style Badge */}
-                  <div className="absolute top-4 left-4">
-                    <Badge className={`${styleInfo.color} border font-semibold backdrop-blur-sm`}>
+                  <div className="absolute top-2 left-2 md:top-4 md:left-4">
+                    <Badge className={`${styleInfo.color} border font-semibold backdrop-blur-sm text-xs md:text-sm`}>
                       {styleInfo.icon} {styleInfo.name}
                     </Badge>
                   </div>
 
                   {/* Index Badge */}
-                  <div className="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                  <div className="absolute bottom-2 right-2 md:bottom-4 md:right-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                     <div className="bg-black/50 backdrop-blur-sm text-white text-xs px-2 py-1 rounded-full font-medium">
                       #{index + 1}
                     </div>
@@ -167,8 +167,8 @@ const ImageGallery = ({ images }: ImageGalleryProps) => {
                 </div>
 
                 {/* Content */}
-                <div className="p-6">
-                  <div className="space-y-4">
+                <div className="p-4 md:p-6">
+                  <div className="space-y-3 md:space-y-4">
                     <div>
                       <h3 className="font-bold text-lg text-foreground mb-1">
                         {styleInfo.name} Style
@@ -180,7 +180,7 @@ const ImageGallery = ({ images }: ImageGalleryProps) => {
 
                     {/* AI Prompt */}
                     {image.description && (
-                      <div className="bg-muted/50 rounded-xl p-4 border border-border/50">
+                      <div className="bg-muted/50 rounded-xl p-3 md:p-4 border border-border/50">
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1">
                             <Sparkles className="w-3 h-3" />
@@ -189,7 +189,7 @@ const ImageGallery = ({ images }: ImageGalleryProps) => {
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="h-6 w-6 p-0 hover:bg-primary/10"
+                            className="h-6 w-6 p-0 hover:bg-primary/10 shrink-0"
                             onClick={() => copyPrompt(image.description)}
                           >
                             <Copy className="h-3 w-3" />
@@ -204,13 +204,15 @@ const ImageGallery = ({ images }: ImageGalleryProps) => {
                     {/* Action Buttons */}
                     <div className="flex gap-2 pt-2">
                       <Button
-                        className="flex-1 font-semibold"
+                        className="flex-1 font-semibold text-sm md:text-base min-h-[40px] md:min-h-[44px]"
                         onClick={() => handleDownload(image)}
                         disabled={downloadingId === image.filename}
                         variant="cta"
                       >
-                        <Download className="h-4 w-4" />
-                        {downloadingId === image.filename ? 'Downloading...' : 'Download'}
+                        <Download className="h-3.5 w-3.5 md:h-4 md:w-4 shrink-0" />
+                        <span className="truncate">
+                          {downloadingId === image.filename ? 'Downloading...' : 'Download'}
+                        </span>
                       </Button>
                     </div>
                   </div>
@@ -221,27 +223,27 @@ const ImageGallery = ({ images }: ImageGalleryProps) => {
         </div>
 
         {/* Success Stats */}
-        <div className="max-w-3xl mx-auto mb-12">
+        <div className="max-w-3xl mx-auto mb-8 md:mb-12">
           <Card className="bg-gradient-primary text-white border-0 shadow-strong">
-            <div className="p-6 text-center">
+            <div className="p-4 md:p-6 text-center">
               <div className="flex items-center justify-center gap-2 mb-4">
-                <Star className="w-6 h-6 text-yellow-300" />
-                <h3 className="text-2xl font-bold">Success Metrics</h3>
-                <Star className="w-6 h-6 text-yellow-300" />
+                <Star className="w-5 h-5 md:w-6 md:h-6 text-yellow-300" />
+                <h3 className="text-xl md:text-2xl font-bold">Success Metrics</h3>
+                <Star className="w-5 h-5 md:w-6 md:h-6 text-yellow-300" />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
                 <div className="text-center">
-                  <div className="text-3xl font-bold mb-1">{images.length}</div>
-                  <div className="text-white/90 text-sm">Professional Variations</div>
+                  <div className="text-2xl md:text-3xl font-bold mb-1">{images.length}</div>
+                  <div className="text-white/90 text-xs md:text-sm">Professional Variations</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-3xl font-bold mb-1">~3x</div>
-                  <div className="text-white/90 text-sm">Expected Conversion Boost</div>
+                  <div className="text-2xl md:text-3xl font-bold mb-1">~3x</div>
+                  <div className="text-white/90 text-xs md:text-sm">Expected Conversion Boost</div>
                 </div>
                 <div className="text-center">
-                  <div className="text-3xl font-bold mb-1">$0</div>
-                  <div className="text-white/90 text-sm">Photography Costs Saved</div>
+                  <div className="text-2xl md:text-3xl font-bold mb-1">$0</div>
+                  <div className="text-white/90 text-xs md:text-sm">Photography Costs Saved</div>
                 </div>
               </div>
             </div>
@@ -251,42 +253,42 @@ const ImageGallery = ({ images }: ImageGalleryProps) => {
         {/* Marketing Tips */}
         <div className="max-w-4xl mx-auto">
           <Card className="border-0 shadow-strong overflow-hidden">
-            <div className="bg-gradient-secondary p-6">
-              <div className="text-center mb-6">
+            <div className="bg-gradient-secondary p-4 md:p-6">
+              <div className="text-center mb-4 md:mb-6">
                 <div className="flex items-center justify-center gap-2 mb-3">
-                  <TrendingUp className="w-6 h-6 text-primary" />
-                  <h3 className="text-2xl font-bold text-foreground">Pro Marketing Tips</h3>
-                  <TrendingUp className="w-6 h-6 text-primary" />
+                  <TrendingUp className="w-5 h-5 md:w-6 md:h-6 text-primary" />
+                  <h3 className="text-xl md:text-2xl font-bold text-foreground">Pro Marketing Tips</h3>
+                  <TrendingUp className="w-5 h-5 md:w-6 md:h-6 text-primary" />
                 </div>
-                <p className="text-muted-foreground">Maximize your sales potential with these strategies</p>
+                <p className="text-sm md:text-base text-muted-foreground">Maximize your sales potential with these strategies</p>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
                 <div className="text-center group">
-                  <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mx-auto mb-3 transition-transform group-hover:scale-110">
-                    <span className="text-2xl">🚀</span>
+                  <div className="w-10 h-10 md:w-12 md:h-12 bg-primary/10 rounded-xl flex items-center justify-center mx-auto mb-3 transition-transform group-hover:scale-110">
+                    <span className="text-xl md:text-2xl">🚀</span>
                   </div>
-                  <h4 className="font-bold mb-2 text-foreground">A/B Test Everything</h4>
+                  <h4 className="font-bold mb-2 text-foreground text-sm md:text-base">A/B Test Everything</h4>
                   <p className="text-xs text-muted-foreground leading-relaxed">
                     Test different styles across your marketing channels to find what converts best.
                   </p>
                 </div>
 
                 <div className="text-center group">
-                  <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mx-auto mb-3 transition-transform group-hover:scale-110">
-                    <span className="text-2xl">📱</span>
+                  <div className="w-10 h-10 md:w-12 md:h-12 bg-primary/10 rounded-xl flex items-center justify-center mx-auto mb-3 transition-transform group-hover:scale-110">
+                    <span className="text-xl md:text-2xl">📱</span>
                   </div>
-                  <h4 className="font-bold mb-2 text-foreground">Multi-Platform Strategy</h4>
+                  <h4 className="font-bold mb-2 text-foreground text-sm md:text-base">Multi-Platform Strategy</h4>
                   <p className="text-xs text-muted-foreground leading-relaxed">
                     Use different variations for Instagram, Amazon, Facebook, and your website.
                   </p>
                 </div>
 
                 <div className="text-center group">
-                  <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center mx-auto mb-3 transition-transform group-hover:scale-110">
-                    <span className="text-2xl">🎯</span>
+                  <div className="w-10 h-10 md:w-12 md:h-12 bg-primary/10 rounded-xl flex items-center justify-center mx-auto mb-3 transition-transform group-hover:scale-110">
+                    <span className="text-xl md:text-2xl">🎯</span>
                   </div>
-                  <h4 className="font-bold mb-2 text-foreground">Seasonal Campaigns</h4>
+                  <h4 className="font-bold mb-2 text-foreground text-sm md:text-base">Seasonal Campaigns</h4>
                   <p className="text-xs text-muted-foreground leading-relaxed">
                     Perfect timing for holiday promotions, seasonal sales, and limited-time offers.
                   </p>

@@ -100,7 +100,7 @@ const GenerationViewer = ({ generationId, onBack }: GenerationViewerProps) => {
 
   if (isLoading) {
     return (
-      <div className="py-12 px-4">
+      <div className="py-12 px-4 overflow-x-hidden">
         <div className="container mx-auto">
           {/* Header Skeleton */}
           <div className="mb-8">
@@ -128,7 +128,7 @@ const GenerationViewer = ({ generationId, onBack }: GenerationViewerProps) => {
 
   if (error) {
     return (
-      <div className="py-12 px-4">
+      <div className="py-12 px-4 overflow-x-hidden">
         <div className="container mx-auto">
           <div className="max-w-md mx-auto text-center">
             <Alert className="border-red-200 bg-red-50">
@@ -157,7 +157,7 @@ const GenerationViewer = ({ generationId, onBack }: GenerationViewerProps) => {
 
   if (!generation) {
     return (
-      <div className="py-12 px-4">
+      <div className="py-12 px-4 overflow-x-hidden">
         <div className="container mx-auto text-center">
           <p className="text-muted-foreground">Generation not found</p>
           {onBack && (
@@ -172,7 +172,7 @@ const GenerationViewer = ({ generationId, onBack }: GenerationViewerProps) => {
   }
 
   return (
-    <div className="py-12 px-4">
+    <div className="py-12 px-4 overflow-x-hidden">
       <div className="container mx-auto">
         {/* Header */}
         <div className="mb-8">
