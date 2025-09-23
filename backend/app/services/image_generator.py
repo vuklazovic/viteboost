@@ -73,13 +73,14 @@ Return only the {num_prompts} prompts, one per line, without any additional text
     
     return generic_prompts[:num_prompts]
 
-async def generate_images(image_path: str, file_id: str) -> List[dict]:
+async def generate_images(image_path: str, file_id: str, num_images: int = None) -> List[dict]:
     key = os.getenv("GEMINI_API_KEY")
     if not key:
         raise ValueError("GEMINI_API_KEY environment variable is required")
     
-    # Use configured number of images
-    num_images = settings.NUM_IMAGES
+    # Use provided number of images or fall back to configured default
+    if num_images is None:
+        num_images = settings.NUM_IMAGES
     print(f"Generating {num_images} images...")
     
     try:

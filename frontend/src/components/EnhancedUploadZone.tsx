@@ -64,8 +64,8 @@ const EnhancedUploadZone = ({
 
   // Generate images mutation
   const generateImagesMutation = useMutation({
-    mutationFn: uploadAndGenerateImages,
-    onMutate: (file) => {
+    mutationFn: ({ file, quantity }: { file: File; quantity: number }) => uploadAndGenerateImages(file, quantity),
+    onMutate: ({ file, quantity }) => {
       const uploadId = Math.random().toString(36).substring(7);
       const newItem: UploadItem = {
         id: uploadId,
@@ -94,9 +94,9 @@ const EnhancedUploadZone = ({
         });
       }, 300);
 
-      return { uploadId, interval };
+      return { uploadId, interval, quantity };
     },
-    onSuccess: (result, file, context) => {
+    onSuccess: (result, { file }, context) => {
       if (context?.interval) {
         clearInterval(context.interval);
       }
@@ -129,7 +129,7 @@ const EnhancedUploadZone = ({
         refreshCreditsImmediate();
       }
     },
-    onError: (error, file, context) => {
+    onError: (error, { file }, context) => {
       if (context?.interval) {
         clearInterval(context.interval);
       }
@@ -153,7 +153,8 @@ const EnhancedUploadZone = ({
       }
 
       // Restore credits on failure
-      const cost = (costPerImage || 1) * (numImages || 1);
+      const actualQuantity = context?.quantity || numImages || 1;
+      const cost = (costPerImage || 1) * actualQuantity;
       const restoredCredits = (credits ?? 0) + cost;
       updateCredits(restoredCredits);
 
@@ -205,7 +206,7 @@ const EnhancedUploadZone = ({
       const newCredits = (credits ?? 0) - cost;
       updateCredits(newCredits);
 
-      generateImagesMutation.mutate(file);
+      generateImagesMutation.mutate({ file, quantity: numImages || 1 });
     });
   }, [generateImagesMutation, credits, costPerImage, numImages, updateCredits]);
 
@@ -240,7 +241,7 @@ const EnhancedUploadZone = ({
       const newCredits = (credits ?? 0) - cost;
       updateCredits(newCredits);
 
-      generateImagesMutation.mutate(file);
+      generateImagesMutation.mutate({ file, quantity: numImages || 1 });
       setUrlInput('');
       setIsUrlModalOpen(false);
     } catch (error) {
@@ -271,7 +272,7 @@ const EnhancedUploadZone = ({
             const newCredits = (credits ?? 0) - cost;
             updateCredits(newCredits);
 
-            generateImagesMutation.mutate(file);
+            generateImagesMutation.mutate({ file, quantity: numImages || 1 });
             toast.success('📋 Image pasted and uploaded!');
           }
         }
@@ -317,7 +318,7 @@ const EnhancedUploadZone = ({
       return updated;
     });
 
-    generateImagesMutation.mutate(item.file);
+    generateImagesMutation.mutate({ file: item.file, quantity: numImages || 1 });
   };
 
   const getStatusColor = (status: UploadItem['status']) => {

@@ -50,7 +50,8 @@ async def upload_image(
 
 @router.post("/generate")
 async def generate_product_images(
-    file_id: str, 
+    file_id: str,
+    quantity: int = None,
     current_user: Dict[str, Any] = Depends(get_current_user)
 ):
     # Check if user owns the file
@@ -68,8 +69,17 @@ async def generate_product_images(
         raise HTTPException(status_code=404, detail="File not found")
     
     try:
+        # Use quantity parameter or fall back to default NUM_IMAGES
+        num_images = quantity if quantity is not None else settings.NUM_IMAGES
+
+        # Validate quantity limits
+        if num_images < 1:
+            raise HTTPException(status_code=400, detail="Quantity must be at least 1")
+        if num_images > 100:  # Set reasonable upper limit
+            raise HTTPException(status_code=400, detail="Quantity cannot exceed 100")
+
         # Determine and pre-charge credits immediately
-        cost = settings.NUM_IMAGES * settings.CREDIT_COST_PER_IMAGE
+        cost = num_images * settings.CREDIT_COST_PER_IMAGE
         user_credits = credit_manager.get_credits(current_user["user_id"])
         if user_credits < cost:
             raise HTTPException(status_code=402, detail="Insufficient credits")
@@ -77,7 +87,7 @@ async def generate_product_images(
         # Deduct up front; will refund on failure
         remaining_after_charge = credit_manager.consume_credits(current_user["user_id"], cost)
 
-        generated_images = await generate_images(str(file_path), file_id)
+        generated_images = await generate_images(str(file_path), file_id, num_images)
         
         # Register generated files
         for image_info in generated_images:

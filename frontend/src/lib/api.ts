@@ -56,9 +56,14 @@ export const uploadImage = async (file: File): Promise<UploadResponse> => {
   return response.data;
 };
 
-export const generateImages = async (fileId: string): Promise<GenerateResponse> => {
+export const generateImages = async (fileId: string, quantity?: number): Promise<GenerateResponse> => {
+  const params: any = { file_id: fileId };
+  if (quantity !== undefined) {
+    params.quantity = quantity;
+  }
+
   const response = await api.post<GenerateResponse>('/generate', null, {
-    params: { file_id: fileId },
+    params,
   });
 
   // Transform URLs to be absolute using configured base URL
@@ -78,9 +83,9 @@ export const generateImages = async (fileId: string): Promise<GenerateResponse> 
 };
 
 // Combined function for full workflow
-export const uploadAndGenerateImages = async (file: File): Promise<{ images: GeneratedImage[], credits?: number }> => {
+export const uploadAndGenerateImages = async (file: File, quantity?: number): Promise<{ images: GeneratedImage[], credits?: number }> => {
   const uploadResult = await uploadImage(file);
-  const generateResult = await generateImages(uploadResult.file_id);
+  const generateResult = await generateImages(uploadResult.file_id, quantity);
   return {
     images: generateResult.generated_images,
     credits: generateResult.credits
