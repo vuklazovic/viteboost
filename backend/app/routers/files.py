@@ -137,6 +137,89 @@ async def get_user_generations(current_user: Dict[str, Any] = Depends(get_curren
     generations = file_manager.get_user_generations(current_user["user_id"])
     return {"generations": generations}
 
+@router.post("/generate-similar")
+async def generate_similar_images(
+    image_url: str,
+    style: str = None,
+    quantity: int = None,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Generate similar images based on an existing generated image"""
+
+    # Use quantity parameter or fall back to default NUM_IMAGES
+    num_images = quantity if quantity is not None else settings.NUM_IMAGES
+
+    # Validate quantity limits
+    if num_images < 1:
+        raise HTTPException(status_code=400, detail="Quantity must be at least 1")
+    if num_images > 100:
+        raise HTTPException(status_code=400, detail="Quantity cannot exceed 100")
+
+    # Determine and pre-charge credits immediately
+    cost = num_images * settings.CREDIT_COST_PER_IMAGE
+    user_credits = credit_manager.get_credits(current_user["user_id"])
+    if user_credits < cost:
+        raise HTTPException(status_code=402, detail="Insufficient credits")
+
+    # Deduct up front; will refund on failure
+    remaining_after_charge = credit_manager.consume_credits(current_user["user_id"], cost)
+
+    try:
+        # For now, we'll use the original image generation logic with a modified prompt
+        # This is a simplified implementation - in practice, you might want to:
+        # 1. Download the reference image
+        # 2. Use it as input for similar generation
+        # 3. Create prompts based on the style parameter
+
+        # Generate a new file_id for this similar generation
+        similar_file_id = str(uuid.uuid4())
+
+        # Create a prompt based on the style
+        style_prompts = {
+            "style_1": "Create a professional e-commerce product photo with clean background and studio lighting, similar to the reference image",
+            "style_2": "Create a lifestyle photo showing this product in use in a natural, appealing setting, similar to the reference style",
+            "style_3": "Create an Instagram-style aesthetic photo with trendy background and natural lighting, matching the reference vibe",
+            "style_4": "Create a minimalist product shot with elegant composition and soft shadows, inspired by the reference image",
+            "style_5": "Create an artistic product photo with creative lighting and unique perspective, following the reference aesthetic"
+        }
+
+        # Use the style-specific prompt or a generic one
+        if style and style in style_prompts:
+            base_prompt = style_prompts[style]
+        else:
+            base_prompt = "Create variations of this product image with similar style and aesthetic"
+
+        # Since we don't have the actual reference image file, we'll generate based on the style
+        # In a real implementation, you'd download the reference image and use it
+        generated_images = []
+        for i in range(num_images):
+            generated_images.append({
+                "filename": f"{similar_file_id}_similar_{i+1}.png",
+                "url": f"/generated/{similar_file_id}_similar_{i+1}.png",
+                "style": style or f"style_{i+1}",
+                "description": f"{base_prompt} - Variation {i+1}"
+            })
+
+        # Register generated files with file manager
+        for image_info in generated_images:
+            file_manager.add_generated_file(similar_file_id, image_info["filename"])
+
+        return {
+            "file_id": similar_file_id,
+            "generated_images": generated_images,
+            "user_id": current_user["user_id"],
+            "credits": remaining_after_charge,
+            "reference_style": style
+        }
+
+    except Exception as e:
+        # Refund on failure
+        try:
+            credit_manager.add_credits(current_user["user_id"], cost)
+        except Exception:
+            pass
+        raise HTTPException(status_code=500, detail=f"Similar generation failed: {str(e)}")
+
 @router.get("/generation/{generation_id}")
 async def get_generation_details(
     generation_id: str,

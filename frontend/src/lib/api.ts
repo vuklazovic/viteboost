@@ -129,6 +129,41 @@ export const getUserGenerations = async (): Promise<Generation[]> => {
   }));
 };
 
+export const generateSimilarImages = async (
+  imageUrl: string,
+  style?: string,
+  quantity?: number
+): Promise<GenerateResponse> => {
+  const params: any = {
+    image_url: imageUrl
+  };
+
+  if (style) {
+    params.style = style;
+  }
+
+  if (quantity !== undefined) {
+    params.quantity = quantity;
+  }
+
+  const response = await api.post<GenerateResponse>('/generate-similar', null, {
+    params,
+  });
+
+  // Transform URLs to be absolute
+  const configuredBase = (import.meta as any).env?.VITE_API_BASE_URL || axios.defaults.baseURL || '';
+  const API_BASE_URL = (configuredBase || '').replace(/\/$/, '');
+  const toAbsoluteUrl = (u: string) => (/^https?:\/\//i.test(u) ? u : (API_BASE_URL ? `${API_BASE_URL}${u}` : u));
+
+  return {
+    ...response.data,
+    generated_images: response.data.generated_images.map(img => ({
+      ...img,
+      url: toAbsoluteUrl(img.url)
+    }))
+  };
+};
+
 export const getGenerationDetails = async (generationId: string): Promise<GenerationDetails> => {
   const response = await api.get<GenerationDetails>(`/generation/${generationId}`);
 
