@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { formatDate } from "@/lib/utils";
 import {
   Sheet,
   SheetContent,
@@ -168,13 +169,6 @@ const GenerationPanel = ({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, selectedImageIndex, generation, onClose]);
 
-  const formatDate = (dateString: string) => {
-    try {
-      return formatDistanceToNow(new Date(dateString), { addSuffix: true });
-    } catch {
-      return 'Unknown date';
-    }
-  };
 
   const handleDownload = async (filename: string, url: string) => {
     try {

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { formatDate } from "@/lib/utils";
 import {
   Plus,
   Upload,
@@ -396,7 +397,7 @@ const Generate = () => {
                         </h3>
                         <div className="flex items-center justify-between text-sm text-muted-foreground">
                           <span>{generation.generated_count} images</span>
-                          <span>Just now</span>
+                          <span>{formatDate(generation.created_at)}</span>
                         </div>
                       </div>
                     </Card>

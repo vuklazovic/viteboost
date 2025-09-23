@@ -7,7 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Plus, Calendar, ImageIcon, Clock, CheckCircle2 } from "lucide-react";
 import { useQuery } from '@tanstack/react-query';
 import { Generation, getUserGenerations } from '@/lib/api';
-import { formatDistanceToNow } from 'date-fns';
+import { formatDate } from '@/lib/utils';
 
 interface GenerationTimelineProps {
   selectedGenerationId?: string;
@@ -26,13 +26,6 @@ const GenerationTimeline = ({
     refetchOnWindowFocus: false
   });
 
-  const formatDate = (dateString: string) => {
-    try {
-      return formatDistanceToNow(new Date(dateString), { addSuffix: true });
-    } catch {
-      return 'Unknown date';
-    }
-  };
 
   const getStatusColor = (status: string) => {
     switch (status) {

@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { formatDate } from "@/lib/utils";
 import {
   Download,
   ExternalLink,
@@ -41,13 +42,6 @@ const GenerationViewer = ({ generationId, onBack }: GenerationViewerProps) => {
     refetchOnWindowFocus: false
   });
 
-  const formatDate = (dateString: string) => {
-    try {
-      return formatDistanceToNow(new Date(dateString), { addSuffix: true });
-    } catch {
-      return 'Unknown date';
-    }
-  };
 
   const getStyleInfo = (style: string, index: number) => {
     const styleIcons = ['🛍️', '📸', '📋', '🎨', '🚀', '🎆', '🌈', '💫', '✨', '🎯'];
