@@ -78,7 +78,7 @@ const EnhancedUploadZone = ({
       };
 
       setUploadQueue(prev => {
-        const updated = [...prev, newItem];
+        const updated = [newItem, ...prev];
         onQueueUpdate?.(updated);
         return updated;
       });
@@ -403,7 +403,19 @@ const EnhancedUploadZone = ({
           {uploadQueue.length > 0 && (
             <div className="space-y-2">
               {uploadQueue.map((item) => (
-                <div key={item.id} className="flex items-center gap-3 p-2 border rounded-lg">
+                <div
+                  key={item.id}
+                  className={`flex items-center gap-3 p-2 border rounded-lg transition-all duration-200 ${
+                    item.status === 'completed' && item.generationId && onOpenGeneration
+                      ? 'cursor-pointer hover:border-primary hover:shadow-sm hover:bg-muted/30'
+                      : ''
+                  }`}
+                  onClick={() => {
+                    if (item.status === 'completed' && item.generationId && onOpenGeneration) {
+                      onOpenGeneration(item.generationId);
+                    }
+                  }}
+                >
                   <img
                     src={item.preview}
                     alt="Upload preview"
@@ -423,22 +435,15 @@ const EnhancedUploadZone = ({
                   <div className="flex gap-1">
                     {item.status === 'error' && (
                       <Button
-                        onClick={() => retryUpload(item.id)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          retryUpload(item.id);
+                        }}
                         variant="ghost"
                         size="sm"
                         className="h-6 w-6 p-0"
                       >
                         <RotateCcw className="h-3 w-3" />
-                      </Button>
-                    )}
-                    {item.status === 'completed' && item.generationId && onOpenGeneration && (
-                      <Button
-                        onClick={() => onOpenGeneration(item.generationId!)}
-                        variant="default"
-                        size="sm"
-                        className="h-6 w-6 p-0"
-                      >
-                        <ArrowRight className="h-3 w-3" />
                       </Button>
                     )}
                   </div>
@@ -599,7 +604,19 @@ const EnhancedUploadZone = ({
 
           <div className="space-y-4">
             {uploadQueue.map((item) => (
-              <div key={item.id} className="flex items-center gap-4 p-4 border rounded-xl">
+              <div
+                key={item.id}
+                className={`flex items-center gap-4 p-4 border rounded-xl transition-all duration-200 ${
+                  item.status === 'completed' && item.generationId && onOpenGeneration
+                    ? 'cursor-pointer hover:border-primary hover:shadow-md hover:bg-muted/30'
+                    : ''
+                }`}
+                onClick={() => {
+                  if (item.status === 'completed' && item.generationId && onOpenGeneration) {
+                    onOpenGeneration(item.generationId);
+                  }
+                }}
+              >
                 <img
                   src={item.preview}
                   alt="Upload preview"
@@ -631,6 +648,9 @@ const EnhancedUploadZone = ({
                   {item.status === 'completed' && item.generatedImages && (
                     <p className="text-sm text-green-600">
                       ✨ Generated {item.generatedImages.length} variations
+                      {item.generationId && onOpenGeneration && (
+                        <span className="text-muted-foreground ml-2">• Click to view</span>
+                      )}
                     </p>
                   )}
 
@@ -651,19 +671,6 @@ const EnhancedUploadZone = ({
                     >
                       <RotateCcw className="h-4 w-4 mr-2" />
                       Retry
-                    </Button>
-                  )}
-
-                  {item.status === 'completed' && item.generationId && onOpenGeneration && (
-                    <Button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onOpenGeneration(item.generationId!);
-                      }}
-                      variant="default"
-                      size="sm"
-                    >
-                      Open
                     </Button>
                   )}
                 </div>
