@@ -7,6 +7,7 @@ import { Loader2, CreditCard, Calendar, ExternalLink, RotateCcw } from 'lucide-r
 import { toast } from 'sonner'
 import { useAuth } from '../contexts/AuthContext'
 import { SubscriptionPlansSimple } from './SubscriptionPlansSimple'
+import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 
 interface SubscriptionData {
@@ -40,6 +41,26 @@ export const SubscriptionManagement: React.FC = () => {
   const [showPlans, setShowPlans] = useState(false)
   const [authError, setAuthError] = useState(false)
   const { refreshCredits, isAuthenticated, user } = useAuth()
+  const navigate = useNavigate()
+
+  const handleNavigateToPricing = () => {
+    if (window.location.pathname === '/') {
+      // If on home page, scroll to pricing section
+      const element = document.getElementById('pricing')
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' })
+      }
+    } else {
+      // If on another page, navigate to home and scroll to pricing section
+      navigate('/', { replace: false })
+      setTimeout(() => {
+        const element = document.getElementById('pricing')
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth' })
+        }
+      }, 100)
+    }
+  }
 
   useEffect(() => {
     if (isAuthenticated && user) {
@@ -60,6 +81,22 @@ export const SubscriptionManagement: React.FC = () => {
       if (error.response?.status === 401 || error.response?.status === 403) {
         setAuthError(true)
         toast.error('Please log in to view subscription information')
+      } else if (error.response?.status === 404) {
+        // User has no subscription - they're on free plan
+        setSubscriptionData({
+          subscription: null,
+          plan: {
+            id: 'free',
+            name: 'Free Plan',
+            price: 0,
+            credits: 3
+          },
+          credits: {
+            current: 3,
+            last_reset: null,
+            next_reset: null
+          }
+        })
       } else {
         toast.error('Failed to load subscription information')
       }
@@ -193,7 +230,19 @@ export const SubscriptionManagement: React.FC = () => {
   if (!subscriptionData) {
     return (
       <div className="text-center py-8">
-        <p>Failed to load subscription information</p>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">You are on the Free Plan</h3>
+              <p className="text-muted-foreground">
+                You currently have access to the free plan with 15 credits per month.
+              </p>
+              <Button onClick={handleNavigateToPricing}>
+                Upgrade to Pro
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     )
   }
@@ -248,7 +297,7 @@ export const SubscriptionManagement: React.FC = () => {
 
         <CardFooter className="flex gap-2">
           {isFreePlan ? (
-            <Button onClick={() => setShowPlans(true)}>
+            <Button onClick={handleNavigateToPricing}>
               Upgrade Plan
             </Button>
           ) : (
