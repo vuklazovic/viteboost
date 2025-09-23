@@ -83,12 +83,13 @@ export const generateImages = async (fileId: string, quantity?: number): Promise
 };
 
 // Combined function for full workflow
-export const uploadAndGenerateImages = async (file: File, quantity?: number): Promise<{ images: GeneratedImage[], credits?: number }> => {
+export const uploadAndGenerateImages = async (file: File, quantity?: number): Promise<{ images: GeneratedImage[], credits?: number, file_id: string }> => {
   const uploadResult = await uploadImage(file);
   const generateResult = await generateImages(uploadResult.file_id, quantity);
   return {
     images: generateResult.generated_images,
-    credits: generateResult.credits
+    credits: generateResult.credits,
+    file_id: generateResult.file_id
   };
 };
 

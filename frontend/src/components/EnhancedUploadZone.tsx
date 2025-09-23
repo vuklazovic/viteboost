@@ -21,7 +21,6 @@ import {
   RotateCcw,
   Play,
   Pause,
-  Trash2,
   Settings
 } from "lucide-react";
 import { useDropzone } from 'react-dropzone';
@@ -38,18 +37,21 @@ interface UploadItem {
   status: 'pending' | 'uploading' | 'generating' | 'completed' | 'error';
   progress: number;
   generatedImages?: GeneratedImage[];
+  generationId?: string;
   error?: string;
 }
 
 interface EnhancedUploadZoneProps {
-  onImagesGenerated?: (images: GeneratedImage[], uploadId: string) => void;
+  onImagesGenerated?: (images: GeneratedImage[], uploadId: string, generationId?: string) => void;
   onQueueUpdate?: (queue: UploadItem[]) => void;
+  onOpenGeneration?: (generationId: string) => void;
   compact?: boolean;
 }
 
 const EnhancedUploadZone = ({
   onImagesGenerated,
   onQueueUpdate,
+  onOpenGeneration,
   compact = false
 }: EnhancedUploadZoneProps) => {
   const [uploadQueue, setUploadQueue] = useState<UploadItem[]>([]);
@@ -110,7 +112,8 @@ const EnhancedUploadZone = ({
                   ...item,
                   status: 'completed' as const,
                   progress: 100,
-                  generatedImages: result.images
+                  generatedImages: result.images,
+                  generationId: result.file_id
                 }
               : item
           );
@@ -118,7 +121,7 @@ const EnhancedUploadZone = ({
           return updated;
         });
 
-        onImagesGenerated?.(result.images, uploadId);
+        onImagesGenerated?.(result.images, uploadId, result.file_id);
         toast.success(`✨ Generated ${result.images.length} variations!`);
       }
 
@@ -283,14 +286,6 @@ const EnhancedUploadZone = ({
     return () => document.removeEventListener('paste', handlePaste);
   }, [generateImagesMutation, credits, costPerImage, numImages, updateCredits]);
 
-  // Remove item from queue
-  const removeFromQueue = (id: string) => {
-    setUploadQueue(prev => {
-      const updated = prev.filter(item => item.id !== id);
-      onQueueUpdate?.(updated);
-      return updated;
-    });
-  };
 
   // Retry failed upload
   const retryUpload = (id: string) => {
@@ -436,14 +431,16 @@ const EnhancedUploadZone = ({
                         <RotateCcw className="h-3 w-3" />
                       </Button>
                     )}
-                    <Button
-                      onClick={() => removeFromQueue(item.id)}
-                      variant="ghost"
-                      size="sm"
-                      className="h-6 w-6 p-0"
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
+                    {item.status === 'completed' && item.generationId && onOpenGeneration && (
+                      <Button
+                        onClick={() => onOpenGeneration(item.generationId!)}
+                        variant="default"
+                        size="sm"
+                        className="h-6 w-6 p-0"
+                      >
+                        <ArrowRight className="h-3 w-3" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -500,6 +497,13 @@ const EnhancedUploadZone = ({
   // Full upload zone for main view
   return (
     <div className="space-y-6">
+      {/* Image Quantity Selector */}
+      <ImageQuantitySelector
+        value={numImages}
+        onChange={updateNumImages}
+        showCostBreakdown={true}
+      />
+
       {/* Main Drop Zone */}
       <Card
         {...getRootProps()}
@@ -577,21 +581,13 @@ const EnhancedUploadZone = ({
               </div>
               <div className="flex items-center gap-2">
                 <Zap className="w-4 h-4 text-yellow-500" />
-                {(costPerImage || 1) * (numImages || 1)} credits per image
+                {(costPerImage || 1) } credit per image
               </div>
             </div>
           </div>
         </div>
       </Card>
 
-      {/* Image Quantity Selector */}
-      <Card className="p-6">
-        <ImageQuantitySelector
-          value={numImages}
-          onChange={updateNumImages}
-          showCostBreakdown={true}
-        />
-      </Card>
 
       {/* Upload Queue */}
       {uploadQueue.length > 0 && (
@@ -646,7 +642,10 @@ const EnhancedUploadZone = ({
                 <div className="flex gap-2">
                   {item.status === 'error' && (
                     <Button
-                      onClick={() => retryUpload(item.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        retryUpload(item.id);
+                      }}
                       variant="outline"
                       size="sm"
                     >
@@ -655,13 +654,18 @@ const EnhancedUploadZone = ({
                     </Button>
                   )}
 
-                  <Button
-                    onClick={() => removeFromQueue(item.id)}
-                    variant="ghost"
-                    size="sm"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  {item.status === 'completed' && item.generationId && onOpenGeneration && (
+                    <Button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onOpenGeneration(item.generationId!);
+                      }}
+                      variant="default"
+                      size="sm"
+                    >
+                      Open
+                    </Button>
+                  )}
                 </div>
               </div>
             ))}

@@ -33,6 +33,7 @@ interface UploadItem {
   status: 'pending' | 'uploading' | 'generating' | 'completed' | 'error';
   progress: number;
   generatedImages?: GeneratedImage[];
+  generationId?: string;
   error?: string;
 }
 
@@ -62,10 +63,6 @@ const Generate = () => {
   useEffect(() => {
     if (!isLoading && generations.length > 0) {
       setRecentGenerations(generations.slice(0, 3));
-      // If user has generations, show grid view, otherwise stay on upload
-      if (activeTab === 'upload' && generations.length > 5) {
-        setActiveTab('all');
-      }
     }
   }, [generations, isLoading]);
 
@@ -107,14 +104,11 @@ const Generate = () => {
   }, [searchParams.get('payment'), user, session?.access_token, authReady, loading]); // Wait for auth to be ready
 
   // Handle new images generated
-  const handleImagesGenerated = (images: GeneratedImage[], uploadId: string) => {
+  const handleImagesGenerated = (images: GeneratedImage[], uploadId: string, generationId?: string) => {
     toast.success(`✨ Generated ${images.length} stunning variations!`);
 
     // Invalidate generations query to refresh data
     queryClient.invalidateQueries({ queryKey: ['generations'] });
-
-    // Automatically switch to view the new generation if we have the uploadId
-    // For now, we'll just stay on current tab and let user navigate
   };
 
   // Handle queue updates
@@ -192,12 +186,14 @@ const Generate = () => {
 
             {/* Quick Stats */}
             <div className="flex flex-wrap gap-4 lg:flex-col lg:items-end">
-              <Card className="p-4 min-w-32">
+              {/* <Card className="p-4 min-w-32">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-primary">{credits ?? 0}</div>
                   <div className="text-xs text-muted-foreground">Credits Left</div>
                 </div>
-              </Card>
+              </Card> */}
+  
+
               <Card className="p-4 min-w-32">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-foreground">{stats.total}</div>
@@ -243,12 +239,13 @@ const Generate = () => {
                 <EnhancedUploadZone
                   onImagesGenerated={handleImagesGenerated}
                   onQueueUpdate={handleQueueUpdate}
+                  onOpenGeneration={handleViewGeneration}
                 />
               </div>
 
               {/* Sidebar Info */}
               <div className="space-y-6">
-                {/* Quick Stats */}
+                {/* Quick Stats
                 <Card className="p-6">
                   <h3 className="font-semibold mb-4">Quick Stats</h3>
                   <div className="space-y-3">
@@ -274,7 +271,7 @@ const Generate = () => {
                       </Badge>
                     </div>
                   </div>
-                </Card>
+                </Card> */}
 
                 {/* Recent Generations Preview */}
                 {recentGenerations.length > 0 && (
@@ -338,10 +335,6 @@ const Generate = () => {
                     <div className="flex items-start gap-2">
                       <div className="w-1.5 h-1.5 bg-primary rounded-full mt-2 flex-shrink-0"></div>
                       <span>Products with clear backgrounds work best</span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <div className="w-1.5 h-1.5 bg-primary rounded-full mt-2 flex-shrink-0"></div>
-                      <span>Each generation costs 3 credits and produces 3 variations</span>
                     </div>
                   </div>
                 </Card>
