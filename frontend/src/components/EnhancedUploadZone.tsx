@@ -61,6 +61,7 @@ const EnhancedUploadZone = ({
   const [dragCounter, setDragCounter] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const urlInputRef = useRef<HTMLInputElement>(null);
+  const uploadQueueRef = useRef<HTMLDivElement>(null);
 
   const { refreshCredits, refreshCreditsImmediate, updateCredits, updateNumImages, costPerImage, numImages, credits } = useAuth();
 
@@ -80,6 +81,13 @@ const EnhancedUploadZone = ({
       setUploadQueue(prev => {
         const updated = [newItem, ...prev];
         onQueueUpdate?.(updated);
+
+        setTimeout(() => {
+          if (uploadQueueRef.current && window.innerWidth < 768) {
+            uploadQueueRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+        }, 100);
+
         return updated;
       });
 
@@ -401,7 +409,7 @@ const EnhancedUploadZone = ({
 
           {/* Queue Items */}
           {uploadQueue.length > 0 && (
-            <div className="space-y-2">
+            <div ref={uploadQueueRef} className="space-y-2">
               {uploadQueue.map((item) => (
                 <div
                   key={item.id}
@@ -596,7 +604,7 @@ const EnhancedUploadZone = ({
 
       {/* Upload Queue */}
       {uploadQueue.length > 0 && (
-        <Card className="p-6">
+        <Card ref={uploadQueueRef} className="p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold">Upload Queue</h3>
             <Badge variant="secondary">{uploadQueue.length}</Badge>
