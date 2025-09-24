@@ -58,19 +58,11 @@ const Landing = () => {
                   size="lg"
                   variant="secondary"
                   className="text-lg px-8 py-6"
-                  onClick={handleTryNow}
-                >
-                  <Sparkles className="h-5 w-5 mr-2" />
-                  Start Free Trial
-                  <ArrowRight className="h-5 w-5 ml-2" />
-                </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="text-lg px-8 py-6 border-white text-white hover:bg-white hover:text-primary"
                   onClick={handleGenerateClick}
                 >
-                  Generate Images Now
+                  <Sparkles className="h-5 w-5 mr-2" />
+                  Start Generating
+                  <ArrowRight className="h-5 w-5 ml-2" />
                 </Button>
               </div>
             </div>

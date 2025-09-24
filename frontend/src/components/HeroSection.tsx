@@ -1,9 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Upload, Sparkles, Download } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
-import { useAuthModal } from "@/hooks/useAuthModal";
-import { AuthModal } from "@/components/auth/AuthModal";
+import { Sparkles, Download } from "lucide-react";
 import heroImage from "@/assets/hero-products.jpg";
 
 interface HeroSectionProps {
@@ -11,23 +7,6 @@ interface HeroSectionProps {
 }
 
 const HeroSection = ({ onTryNow }: HeroSectionProps) => {
-  const navigate = useNavigate();
-  const { isAuthenticated } = useAuth();
-  const authModal = useAuthModal();
-
-  const handleStartCreating = () => {
-    if (onTryNow) {
-      onTryNow();
-    } else {
-      // Check if user is authenticated before navigating to generate
-      if (isAuthenticated) {
-        navigate('/generate');
-      } else {
-        authModal.openLogin();
-      }
-    }
-  };
-
   return (
     <section className="bg-gradient-hero min-h-[90vh] flex items-center">
       <div className="container mx-auto px-4 py-20">
@@ -43,27 +22,18 @@ const HeroSection = ({ onTryNow }: HeroSectionProps) => {
                 <span className="bg-gradient-primary bg-clip-text text-transparent"> sales machines</span>
               </h1>
               <p className="text-xl text-muted-foreground leading-relaxed">
-                Upload any product photo and get 20+ stunning variations in seconds. 
+                Upload any product photo and get 20+ stunning variations in seconds.
                 Perfect for Instagram, Amazon, catalogs, and ads. No photographer needed.
               </p>
             </div>
-            
+
             <div className="flex flex-col sm:flex-row gap-4">
-              <Button 
-                variant="hero" 
-                size="lg" 
-                className="text-lg px-8 py-6 group"
-                onClick={handleStartCreating}
-              >
-                <Upload className="h-5 w-5 transition-transform group-hover:scale-110" />
-                Start Creating Now
-              </Button>
               <Button variant="premium" size="lg" className="text-lg px-8 py-6 group">
                 <Download className="h-5 w-5 transition-transform group-hover:scale-110" />
                 See Examples
               </Button>
             </div>
-            
+
             <div className="grid grid-cols-3 gap-8 pt-8 border-t border-border/50">
               <div className="text-center">
                 <div className="text-2xl font-bold text-foreground">2M+</div>
@@ -79,12 +49,12 @@ const HeroSection = ({ onTryNow }: HeroSectionProps) => {
               </div>
             </div>
           </div>
-          
+
           <div className="relative">
             <div className="relative z-10 rounded-2xl overflow-hidden shadow-strong">
-              <img 
-                src={heroImage} 
-                alt="Professional product photography showcase" 
+              <img
+                src={heroImage}
+                alt="Professional product photography showcase"
                 className="w-full h-full object-cover"
               />
             </div>
@@ -93,15 +63,6 @@ const HeroSection = ({ onTryNow }: HeroSectionProps) => {
           </div>
         </div>
       </div>
-      
-      {/* Only show modal if onTryNow is not provided (fallback behavior) */}
-      {!onTryNow && (
-        <AuthModal
-          isOpen={authModal.isOpen}
-          onClose={authModal.closeModal}
-          defaultTab={authModal.defaultTab}
-        />
-      )}
     </section>
   );
 };
