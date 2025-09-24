@@ -14,10 +14,9 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
+  DropdownMenuCheckboxItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu";
 import {
   Search,
@@ -25,16 +24,14 @@ import {
   Grid3X3,
   Grid2X2,
   List,
-  Calendar,
   ImageIcon,
   Clock,
   CheckCircle2,
   Star,
-  TrendingUp,
   SortAsc,
   SortDesc,
-  MoreHorizontal,
-  RefreshCw
+  RefreshCw,
+  X
 } from "lucide-react";
 import { useQuery } from '@tanstack/react-query';
 import { Generation, getUserGenerations } from '@/lib/api';
@@ -67,7 +64,6 @@ const GenerationGrid = ({
   const [viewMode, setViewMode] = useState<ViewMode>('grid-large');
   const [sortBy, setSortBy] = useState<SortOption>('newest');
   const [filterBy, setFilterBy] = useState<FilterOption>('all');
-  const [showFilters, setShowFilters] = useState(false);
 
   const { data: generations = [], isLoading, error, refetch } = useQuery({
     queryKey: ['generations'],
@@ -75,11 +71,9 @@ const GenerationGrid = ({
     refetchOnWindowFocus: false
   });
 
-  // Filter and sort generations
   const filteredAndSortedGenerations = useMemo(() => {
     let filtered = [...generations];
 
-    // Apply search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(gen =>
@@ -88,7 +82,6 @@ const GenerationGrid = ({
       );
     }
 
-    // Apply status filter
     switch (filterBy) {
       case 'completed':
         filtered = filtered.filter(gen => gen.status === 'completed');
@@ -104,7 +97,6 @@ const GenerationGrid = ({
         break;
     }
 
-    // Apply sorting
     switch (sortBy) {
       case 'newest':
         filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
@@ -126,13 +118,13 @@ const GenerationGrid = ({
   const getGridClassName = () => {
     switch (viewMode) {
       case 'grid-large':
-        return 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6';
+        return 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6';
       case 'grid-small':
-        return 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-4';
+        return 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 md:gap-4';
       case 'list':
         return 'space-y-2';
       default:
-        return 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6';
+        return 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6';
     }
   };
 
@@ -152,16 +144,14 @@ const GenerationGrid = ({
   if (isLoading) {
     return (
       <div className="space-y-6">
-        {/* Header Skeleton */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <Skeleton className="h-8 w-48" />
           <div className="flex gap-2">
-            <Skeleton className="h-9 w-32" />
-            <Skeleton className="h-9 w-24" />
+            <Skeleton className="h-10 w-48" />
+            <Skeleton className="h-10 w-32" />
           </div>
         </div>
 
-        {/* Grid Skeleton */}
         <div className={getGridClassName()}>
           {Array.from({ length: 12 }).map((_, i) => (
             <Card key={i} className="overflow-hidden">
@@ -179,7 +169,7 @@ const GenerationGrid = ({
 
   if (error) {
     return (
-      <Card className="p-8 text-center">
+      <Card className="p-12 text-center">
         <div className="space-y-4">
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto">
             <ImageIcon className="h-8 w-8 text-red-600" />
@@ -219,175 +209,206 @@ const GenerationGrid = ({
 
   return (
     <div className="space-y-6">
-      {/* Header & Controls */}
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-foreground">Your Generations</h2>
-          <p className="text-muted-foreground">
-            {filteredAndSortedGenerations.length} of {generations.length} generations
-          </p>
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-bold text-foreground">Your Generations</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              {filteredAndSortedGenerations.length} of {generations.length} generations
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="sm:hidden">
+                  {viewMode === 'grid-large' && <Grid3X3 className="h-4 w-4" />}
+                  {viewMode === 'grid-small' && <Grid2X2 className="h-4 w-4" />}
+                  {viewMode === 'list' && <List className="h-4 w-4" />}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuCheckboxItem
+                  checked={viewMode === 'grid-large'}
+                  onCheckedChange={() => setViewMode('grid-large')}
+                >
+                  <Grid3X3 className="h-4 w-4 mr-2" />
+                  Large Grid
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                  checked={viewMode === 'grid-small'}
+                  onCheckedChange={() => setViewMode('grid-small')}
+                >
+                  <Grid2X2 className="h-4 w-4 mr-2" />
+                  Small Grid
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                  checked={viewMode === 'list'}
+                  onCheckedChange={() => setViewMode('list')}
+                >
+                  <List className="h-4 w-4 mr-2" />
+                  List View
+                </DropdownMenuCheckboxItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <div className="hidden sm:flex items-center gap-2">
+              <Button
+                variant={viewMode === 'grid-large' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('grid-large')}
+                className="h-9 w-9 p-0"
+              >
+                <Grid3X3 className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'grid-small' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('grid-small')}
+                className="h-9 w-9 p-0"
+              >
+                <Grid2X2 className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'list' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode('list')}
+                className="h-9 w-9 p-0"
+              >
+                <List className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          {/* Search */}
-          <div className="relative">
+        <div className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search generations..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 w-64"
+              className="pl-10"
             />
           </div>
 
-          {/* Sort */}
-          <Select value={sortBy} onValueChange={(value: SortOption) => setSortBy(value)}>
-            <SelectTrigger className="w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="newest">
-                <div className="flex items-center gap-2">
-                  <SortDesc className="h-4 w-4" />
-                  Newest
-                </div>
-              </SelectItem>
-              <SelectItem value="oldest">
-                <div className="flex items-center gap-2">
-                  <SortAsc className="h-4 w-4" />
-                  Oldest
-                </div>
-              </SelectItem>
-              <SelectItem value="name">
-                <div className="flex items-center gap-2">
-                  <SortAsc className="h-4 w-4" />
-                  Name
-                </div>
-              </SelectItem>
-              <SelectItem value="images">
-                <div className="flex items-center gap-2">
-                  <ImageIcon className="h-4 w-4" />
-                  Images
-                </div>
-              </SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex gap-2">
+            <Select value={sortBy} onValueChange={(value: SortOption) => setSortBy(value)}>
+              <SelectTrigger className="w-full sm:w-36">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="newest">
+                  <div className="flex items-center gap-2">
+                    <SortDesc className="h-4 w-4" />
+                    Newest
+                  </div>
+                </SelectItem>
+                <SelectItem value="oldest">
+                  <div className="flex items-center gap-2">
+                    <SortAsc className="h-4 w-4" />
+                    Oldest
+                  </div>
+                </SelectItem>
+                <SelectItem value="name">
+                  <div className="flex items-center gap-2">
+                    <SortAsc className="h-4 w-4" />
+                    Name
+                  </div>
+                </SelectItem>
+                <SelectItem value="images">
+                  <div className="flex items-center gap-2">
+                    <ImageIcon className="h-4 w-4" />
+                    Images
+                  </div>
+                </SelectItem>
+              </SelectContent>
+            </Select>
 
-          {/* Filter */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="gap-2">
-                <Filter className="h-4 w-4" />
-                Filter
-                {filterBy !== 'all' && (
-                  <Badge variant="secondary" className="ml-1 h-5 text-xs">
-                    1
-                  </Badge>
-                )}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuCheckboxItem
-                checked={filterBy === 'all'}
-                onCheckedChange={() => setFilterBy('all')}
-              >
-                All Generations ({stats.total})
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuCheckboxItem
-                checked={filterBy === 'completed'}
-                onCheckedChange={() => setFilterBy('completed')}
-              >
-                <CheckCircle2 className="h-4 w-4 mr-2 text-green-600" />
-                Completed ({stats.completed})
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem
-                checked={filterBy === 'pending'}
-                onCheckedChange={() => setFilterBy('pending')}
-              >
-                <Clock className="h-4 w-4 mr-2 text-yellow-600" />
-                Pending ({stats.pending})
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuCheckboxItem
-                checked={filterBy === 'failed'}
-                onCheckedChange={() => setFilterBy('failed')}
-              >
-                <TrendingUp className="h-4 w-4 mr-2 text-red-600" />
-                Failed ({stats.failed})
-              </DropdownMenuCheckboxItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuCheckboxItem
-                checked={filterBy === 'favorites'}
-                onCheckedChange={() => setFilterBy('favorites')}
-              >
-                <Star className="h-4 w-4 mr-2 text-yellow-500" />
-                Favorites ({stats.favorites})
-              </DropdownMenuCheckboxItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {/* View Mode */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
-                {viewMode === 'grid-large' && <Grid3X3 className="h-4 w-4" />}
-                {viewMode === 'grid-small' && <Grid2X2 className="h-4 w-4" />}
-                {viewMode === 'list' && <List className="h-4 w-4" />}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setViewMode('grid-large')}>
-                <Grid3X3 className="h-4 w-4 mr-2" />
-                Large Grid
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setViewMode('grid-small')}>
-                <Grid2X2 className="h-4 w-4 mr-2" />
-                Small Grid
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setViewMode('list')}>
-                <List className="h-4 w-4 mr-2" />
-                List View
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="gap-2 whitespace-nowrap">
+                  <Filter className="h-4 w-4" />
+                  <span className="hidden sm:inline">Filter</span>
+                  {filterBy !== 'all' && (
+                    <Badge variant="secondary" className="ml-1 h-5 px-1 text-xs">
+                      1
+                    </Badge>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuCheckboxItem
+                  checked={filterBy === 'all'}
+                  onCheckedChange={() => setFilterBy('all')}
+                >
+                  All Generations ({stats.total})
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem
+                  checked={filterBy === 'completed'}
+                  onCheckedChange={() => setFilterBy('completed')}
+                >
+                  <CheckCircle2 className="h-4 w-4 mr-2 text-green-600" />
+                  Completed ({stats.completed})
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                  checked={filterBy === 'pending'}
+                  onCheckedChange={() => setFilterBy('pending')}
+                >
+                  <Clock className="h-4 w-4 mr-2 text-yellow-600" />
+                  Pending ({stats.pending})
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                  checked={filterBy === 'failed'}
+                  onCheckedChange={() => setFilterBy('failed')}
+                >
+                  <X className="h-4 w-4 mr-2 text-red-600" />
+                  Failed ({stats.failed})
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem
+                  checked={filterBy === 'favorites'}
+                  onCheckedChange={() => setFilterBy('favorites')}
+                >
+                  <Star className="h-4 w-4 mr-2 text-yellow-500" />
+                  Favorites ({stats.favorites})
+                </DropdownMenuCheckboxItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
+
+        {(searchQuery || filterBy !== 'all') && (
+          <div className="flex flex-wrap gap-2">
+            {searchQuery && (
+              <Badge variant="outline" className="gap-2">
+                Search: "{searchQuery}"
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="ml-1 hover:bg-muted rounded-sm p-0.5"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            )}
+            {filterBy !== 'all' && (
+              <Badge variant="outline" className="gap-2">
+                Filter: {filterBy}
+                <button
+                  onClick={() => setFilterBy('all')}
+                  className="ml-1 hover:bg-muted rounded-sm p-0.5"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* Stats Bar */}
-      {(searchQuery || filterBy !== 'all') && (
-        <div className="flex flex-wrap gap-2">
-          {searchQuery && (
-            <Badge variant="outline">
-              Search: "{searchQuery}"
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-4 w-4 p-0 ml-2"
-                onClick={() => setSearchQuery('')}
-              >
-                <X className="h-3 w-3" />
-              </Button>
-            </Badge>
-          )}
-          {filterBy !== 'all' && (
-            <Badge variant="outline">
-              Filter: {filterBy}
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-4 w-4 p-0 ml-2"
-                onClick={() => setFilterBy('all')}
-              >
-                <X className="h-3 w-3" />
-              </Button>
-            </Badge>
-          )}
-        </div>
-      )}
-
-      {/* Results */}
       {filteredAndSortedGenerations.length === 0 ? (
-        <Card className="p-8 text-center">
+        <Card className="p-12 text-center">
           <div className="space-y-4">
             <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto">
               <Search className="h-8 w-8 text-muted-foreground" />
@@ -397,7 +418,7 @@ const GenerationGrid = ({
               <p className="text-muted-foreground mb-4">
                 Try adjusting your search terms or filters to find what you're looking for.
               </p>
-              <div className="flex gap-2 justify-center">
+              <div className="flex gap-2 justify-center flex-wrap">
                 <Button
                   onClick={() => setSearchQuery('')}
                   variant="outline"
