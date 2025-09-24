@@ -583,18 +583,18 @@ const EnhancedUploadZone = ({
               </Button>
             </div>
 
-            <div className="flex items-center justify-center gap-8 pt-6 text-sm text-muted-foreground">
+            <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-6 md:gap-8 pt-6 text-xs sm:text-sm text-muted-foreground">
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-                JPG, PNG, WEBP
+                <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse flex-shrink-0"></div>
+                <span className="whitespace-nowrap">JPG, PNG, WEBP</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
-                Up to 10MB
+                <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse flex-shrink-0"></div>
+                <span className="whitespace-nowrap">Up to 10MB</span>
               </div>
               <div className="flex items-center gap-2">
-                <Zap className="w-4 h-4 text-yellow-500" />
-                {(costPerImage || 1) } credit per image
+                <Zap className="w-4 h-4 text-yellow-500 flex-shrink-0" />
+                <span className="whitespace-nowrap">{(costPerImage || 1)} credit per image</span>
               </div>
             </div>
           </div>

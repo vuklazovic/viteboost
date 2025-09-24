@@ -176,17 +176,18 @@ const PricingSection = ({ onTryNow }: PricingSectionProps) => {
             >
               {plan.popular && !plan.enterprise && (
                 <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                  <div className="bg-gradient-primary text-primary-foreground px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-1">
-                    <Star className="h-4 w-4" />
-                    Most Popular
+                  <div className="bg-gradient-primary text-primary-foreground px-3 py-1.5 md:px-4 md:py-2 rounded-full text-xs md:text-sm font-semibold flex items-center gap-1 whitespace-nowrap">
+                    <Star className="h-3 w-3 md:h-4 md:w-4" />
+                    <span className="hidden sm:inline">Most Popular</span>
+                    <span className="sm:hidden">Popular</span>
                   </div>
                 </div>
               )}
               {plan.enterprise && (
                 <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                  <div className="bg-purple-600 text-white px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-1">
-                    <Crown className="h-4 w-4" />
-                    Need More?
+                  <div className="bg-purple-600 text-white px-3 py-1.5 md:px-4 md:py-2 rounded-full text-xs md:text-sm font-semibold flex items-center gap-1 whitespace-nowrap">
+                    <Crown className="h-3 w-3 md:h-4 md:w-4" />
+                    <span>Need More?</span>
                   </div>
                 </div>
               )}
@@ -227,15 +228,25 @@ const PricingSection = ({ onTryNow }: PricingSectionProps) => {
           ))}
         </div>
         
-        <div className="text-center mt-16 space-y-4">
+        <div className="text-center mt-16 space-y-6">
           <p className="text-muted-foreground">
             All plans include our core AI enhancement technology
           </p>
           <div className="flex justify-center gap-8 text-sm text-muted-foreground">
             <span>✓ No setup fees</span>
             <span>✓ Cancel anytime</span>
-            <span>✓ 14-day free trial</span>
           </div>
+          <Button
+            variant="hero"
+            size="lg"
+            className="mt-8"
+            onClick={() => {
+              window.scrollTo(0, 0);
+              navigate('/generate');
+            }}
+          >
+            Start Generating Now
+          </Button>
         </div>
       </div>
     </section>

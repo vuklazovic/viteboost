@@ -11,6 +11,7 @@ const Index = () => {
   const navigate = useNavigate();
 
   const handleTryNow = () => {
+    window.scrollTo(0, 0);
     navigate("/generate");
   };
 

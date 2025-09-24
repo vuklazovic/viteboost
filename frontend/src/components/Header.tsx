@@ -25,6 +25,7 @@ const Header = () => {
 
   const handleGenerateClick = () => {
     if (isAuthenticated) {
+      window.scrollTo(0, 0);
       navigate('/generate');
     } else {
       authModal.openLogin();
@@ -61,7 +62,7 @@ const Header = () => {
         </Link>
         
         <nav className="hidden md:flex items-center gap-8">
-          <button 
+          <button
             onClick={handleGenerateClick}
             className="text-muted-foreground hover:text-foreground transition-colors"
           >
@@ -78,12 +79,6 @@ const Header = () => {
             className="text-muted-foreground hover:text-foreground transition-colors"
           >
             Pricing
-          </button>
-          <button
-            onClick={() => handleSectionNavigation('examples')}
-            className="text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Examples
           </button>
         </nav>
         
