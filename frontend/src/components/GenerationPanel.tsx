@@ -251,29 +251,29 @@ const GenerationPanel = ({
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent className="!w-full !max-w-none md:!max-w-3xl lg:!max-w-5xl p-0" side="right">
         <div className="h-full flex flex-col">
-          <SheetHeader className="p-4 md:p-6 border-b bg-background/95 backdrop-blur-sm sticky top-0 z-10">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-3 min-w-0 flex-1">
+          <SheetHeader className="p-3 md:p-6 border-b bg-background/95 backdrop-blur-sm sticky top-0 z-10">
+            <div className="flex items-center justify-between gap-2 md:gap-4">
+              <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
                 <Button
                   onClick={onClose}
                   variant="ghost"
                   size="sm"
-                  className="h-9 w-9 p-0 flex-shrink-0"
+                  className="h-10 w-10 p-0 flex-shrink-0 touch-manipulation"
                 >
-                  <X className="h-4 w-4" />
+                  <X className="h-5 w-5" />
                 </Button>
                 <div className="min-w-0 flex-1">
-                  <SheetTitle className="text-lg md:text-xl truncate">
+                  <SheetTitle className="text-base md:text-xl truncate">
                     {generation?.original_filename || 'Loading...'}
                   </SheetTitle>
                   {generation && (
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-sm text-muted-foreground mt-1">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-xs md:text-sm text-muted-foreground mt-1">
                       <div className="flex items-center gap-1">
-                        <Calendar className="h-4 w-4" />
+                        <Calendar className="h-3.5 w-3.5 md:h-4 md:w-4" />
                         <span className="truncate">{formatDate(generation.created_at)}</span>
                       </div>
                       <div className="flex items-center gap-1">
-                        <ImageIcon className="h-4 w-4" />
+                        <ImageIcon className="h-3.5 w-3.5 md:h-4 md:w-4" />
                         <span>{generation.generated_images.length} images</span>
                       </div>
                     </div>
@@ -282,28 +282,28 @@ const GenerationPanel = ({
               </div>
 
               {generation && (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 md:gap-2">
                   <Button
                     onClick={() => onToggleFavorite?.(generationId)}
                     variant="ghost"
                     size="sm"
-                    className={`h-9 w-9 p-0 ${isFavorite ? 'text-yellow-500 hover:text-yellow-600' : ''}`}
+                    className={`h-10 w-10 p-0 touch-manipulation ${isFavorite ? 'text-yellow-500 hover:text-yellow-600' : ''}`}
                   >
-                    {isFavorite ? <Star className="h-4 w-4 fill-current" /> : <StarOff className="h-4 w-4" />}
+                    {isFavorite ? <Star className="h-5 w-5 fill-current" /> : <StarOff className="h-5 w-5" />}
                   </Button>
                   <Button
                     onClick={() => copyToClipboard(generationId, 'Generation ID')}
                     variant="ghost"
                     size="sm"
-                    className="h-9 w-9 p-0"
+                    className="h-10 w-10 p-0 touch-manipulation hidden sm:flex"
                   >
-                    <Copy className="h-4 w-4" />
+                    <Copy className="h-5 w-5" />
                   </Button>
                   <Button
                     onClick={handleDownloadAll}
                     variant="outline"
                     size="sm"
-                    className="gap-2"
+                    className="gap-1 md:gap-2 h-10 px-3 md:px-4 touch-manipulation"
                   >
                     <Download className="h-4 w-4" />
                     <span className="hidden sm:inline">Download All</span>
@@ -314,7 +314,7 @@ const GenerationPanel = ({
           </SheetHeader>
 
           <ScrollArea className="flex-1">
-            <div className="p-4 md:p-6">
+            <div className="p-3 md:p-6">
               {isLoading && (
                 <div className="space-y-6">
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
@@ -373,9 +373,9 @@ const GenerationPanel = ({
                                 )}
                                 variant="secondary"
                                 size="sm"
-                                className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 h-9 w-9 md:h-10 md:w-10 p-0 bg-white/10 hover:bg-white/20 text-white border-0 backdrop-blur-md shadow-medium"
+                                className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 h-10 w-10 md:h-12 md:w-12 p-0 bg-white/10 hover:bg-white/20 text-white border-0 backdrop-blur-md shadow-medium touch-manipulation"
                               >
-                                <ChevronLeft className="h-5 w-5" />
+                                <ChevronLeft className="h-6 w-6" />
                               </Button>
                               <Button
                                 onClick={() => setSelectedImageIndex(
@@ -383,9 +383,9 @@ const GenerationPanel = ({
                                 )}
                                 variant="secondary"
                                 size="sm"
-                                className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 h-9 w-9 md:h-10 md:w-10 p-0 bg-white/10 hover:bg-white/20 text-white border-0 backdrop-blur-md shadow-medium"
+                                className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 h-10 w-10 md:h-12 md:w-12 p-0 bg-white/10 hover:bg-white/20 text-white border-0 backdrop-blur-md shadow-medium touch-manipulation"
                               >
-                                <ChevronRight className="h-5 w-5" />
+                                <ChevronRight className="h-6 w-6" />
                               </Button>
                             </>
                           )}
@@ -410,7 +410,7 @@ const GenerationPanel = ({
                       <Card className="p-4 md:p-6">
                         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                           <div>
-                            <h4 className="font-semibold text-lg mb-1">
+                            <h4 className="font-semibold text-base md:text-lg mb-1">
                               {getStyleInfo(generation.generated_images[selectedImageIndex].style, selectedImageIndex).name} Style
                             </h4>
                             <p className="text-sm text-muted-foreground">
@@ -418,7 +418,7 @@ const GenerationPanel = ({
                             </p>
                           </div>
 
-                          <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
+                          <div className="flex flex-col gap-2 sm:flex-row sm:gap-3 w-full md:w-auto">
                             <Button
                               onClick={() => handleDownload(
                                 generation.generated_images[selectedImageIndex].filename,
@@ -426,7 +426,7 @@ const GenerationPanel = ({
                               )}
                               disabled={downloadingId === generation.generated_images[selectedImageIndex].filename}
                               variant="outline"
-                              className="gap-2"
+                              className="gap-2 min-h-[44px] touch-manipulation w-full sm:w-auto"
                             >
                               <Download className="h-4 w-4" />
                               {downloadingId === generation.generated_images[selectedImageIndex].filename ? 'Downloading...' : 'Download'}
@@ -439,7 +439,7 @@ const GenerationPanel = ({
                               )}
                               disabled={moreLikeThisMutation.isPending || (credits ?? 0) < ((costPerImage || 1) * (numImages || 1))}
                               variant="default"
-                              className="gap-2 bg-gradient-primary"
+                              className="gap-2 bg-gradient-primary min-h-[44px] touch-manipulation w-full sm:w-auto"
                             >
                               {moreLikeThisMutation.isPending ? (
                                 <RotateCcw className="h-4 w-4 animate-spin" />
@@ -500,15 +500,15 @@ const GenerationPanel = ({
                                 loading="lazy"
                               />
 
-                              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
-                              <div className="absolute top-2 left-2">
+                              <div className="absolute top-2 left-2 pointer-events-none">
                                 <Badge className="bg-black/50 text-white border-0 backdrop-blur-sm text-xs">
                                   {styleInfo.icon} {styleInfo.name}
                                 </Badge>
                               </div>
 
-                              <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                              <div className="absolute top-2 right-2 flex gap-1 z-10">
                                 <Button
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -516,20 +516,20 @@ const GenerationPanel = ({
                                   }}
                                   variant="secondary"
                                   size="sm"
-                                  className="h-7 w-7 p-0 bg-white/90 hover:bg-white shadow-medium"
+                                  className="h-8 w-8 p-0 bg-white/90 hover:bg-white shadow-medium touch-manipulation"
                                   disabled={downloadingId === image.filename}
                                 >
-                                  <Download className="h-3.5 w-3.5" />
+                                  <Download className="h-4 w-4" />
                                 </Button>
                               </div>
 
-                              <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                              <div className="absolute bottom-2 right-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
                                 <div className="bg-black/50 backdrop-blur-sm text-white text-xs px-2 py-1 rounded-full font-medium">
                                   #{index + 1}
                                 </div>
                               </div>
 
-                              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+                              <div className="absolute inset-0 flex items-center justify-center md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
                                 <div className="bg-white/90 backdrop-blur-sm rounded-full p-3 shadow-medium">
                                   <Maximize2 className="h-5 w-5 text-gray-800" />
                                 </div>
@@ -545,7 +545,7 @@ const GenerationPanel = ({
                         <Button
                           onClick={() => setVisibleImagesCount(prev => Math.min(prev + 20, generation.generated_images.length))}
                           variant="outline"
-                          className="gap-2"
+                          className="gap-2 min-h-[44px] touch-manipulation px-6"
                         >
                           Load More ({generation.generated_images.length - visibleImagesCount} remaining)
                         </Button>
