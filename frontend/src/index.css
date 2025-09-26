@@ -108,11 +108,22 @@ All colors MUST be HSL.
 }
 
 @layer base {
+  html, body, #root {
+    height: 100%;
+  }
+
   * {
     @apply border-border;
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground overflow-x-hidden;
+  }
+
+  /* Ensure images never overflow their containers */
+  img {
+    max-width: 100%;
+    height: auto;
+    display: block;
   }
 }

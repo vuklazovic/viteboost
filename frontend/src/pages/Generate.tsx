@@ -10,7 +10,6 @@ import {
   Plus,
   Upload,
   Grid3X3,
-  Clock,
   Star,
   TrendingUp,
   Sparkles,
@@ -60,10 +59,12 @@ const Generate = () => {
     staleTime: 30000 // Cache for 30 seconds to reduce requests
   });
 
-  // Smart initial state logic
+  // Compute recent generations for sidebar preview
   useEffect(() => {
     if (!isLoading && generations.length > 0) {
       setRecentGenerations(generations.slice(0, 3));
+    } else {
+      setRecentGenerations([]);
     }
   }, [generations, isLoading]);
 
@@ -119,13 +120,17 @@ const Generate = () => {
 
   // Generation actions
   const handleSelectGeneration = (generationId: string) => {
+    // Always show in All tab inline view
+    setActiveTab('all');
     setSelectedGenerationId(generationId);
-    setIsPanelOpen(true);
+    setIsPanelOpen(false);
   };
 
   const handleViewGeneration = (generationId: string) => {
+    // Used by upload queue + recent preview: go to All and show inline
+    setActiveTab('all');
     setSelectedGenerationId(generationId);
-    setIsPanelOpen(true);
+    setIsPanelOpen(false);
   };
 
   const handleToggleFavorite = (generationId: string) => {
@@ -207,19 +212,10 @@ const Generate = () => {
 
         {/* Main Content Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full max-w-md grid-cols-3">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
             <TabsTrigger value="upload" className="flex items-center gap-2">
               <Upload className="h-4 w-4" />
               <span className="hidden sm:inline">Upload</span>
-            </TabsTrigger>
-            <TabsTrigger value="recent" className="flex items-center gap-2">
-              <Clock className="h-4 w-4" />
-              <span className="hidden sm:inline">Recent</span>
-              {recentGenerations.length > 0 && (
-                <Badge variant="secondary" className="ml-1 h-5 text-xs">
-                  {recentGenerations.length}
-                </Badge>
-              )}
             </TabsTrigger>
             <TabsTrigger value="all" className="flex items-center gap-2">
               <Grid3X3 className="h-4 w-4" />
@@ -244,7 +240,8 @@ const Generate = () => {
                 />
               </div>
 
-              {/* Sidebar Info */}
+              {/* Sidebar Info */
+              }
               <div className="space-y-6">
                 {/* Quick Stats
                 <Card className="p-6">
@@ -274,13 +271,32 @@ const Generate = () => {
                   </div>
                 </Card> */}
 
-                {/* Recent Generations Preview */}
+                {/* Pro Tips */}
+
+                <Card className="p-6">
+                  <h3 className="font-semibold mb-4 flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-primary" />
+                    Pro Tips
+                  </h3>
+                  <div className="space-y-3 text-sm text-muted-foreground">
+                    <div className="flex items-start gap-2">
+                      <div className="w-1.5 h-1.5 bg-primary rounded-full mt-2 flex-shrink-0"></div>
+                      <span>High-resolution images (1024x1024+) produce better results</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <div className="w-1.5 h-1.5 bg-primary rounded-full mt-2 flex-shrink-0"></div>
+                      <span>Products with clear backgrounds work best</span>
+                    </div>
+                  </div>
+                </Card>
+
+                {/* Recent Generations Preview (under Pro Tips) */}
                 {recentGenerations.length > 0 && (
                   <Card className="p-6">
                     <div className="flex items-center justify-between mb-4">
                       <h3 className="font-semibold">Recent Generations</h3>
                       <Button
-                        onClick={() => setActiveTab('recent')}
+                        onClick={() => setActiveTab('all')}
                         variant="ghost"
                         size="sm"
                       >
@@ -301,6 +317,7 @@ const Generate = () => {
                                 src={gen.thumbnail_url}
                                 alt={gen.original_filename}
                                 className="w-full h-full object-cover"
+                                loading="lazy"
                               />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center">
@@ -313,7 +330,7 @@ const Generate = () => {
                               {gen.original_filename}
                             </div>
                             <div className="text-xs text-muted-foreground">
-                              {gen.generated_count} images
+                              {gen.generated_count} images • {formatDate(gen.created_at)}
                             </div>
                           </div>
                         </div>
@@ -321,132 +338,39 @@ const Generate = () => {
                     </div>
                   </Card>
                 )}
-
-                {/* Usage Tips */}
-                <Card className="p-6">
-                  <h3 className="font-semibold mb-4 flex items-center gap-2">
-                    <Sparkles className="h-4 w-4 text-primary" />
-                    Pro Tips
-                  </h3>
-                  <div className="space-y-3 text-sm text-muted-foreground">
-                    <div className="flex items-start gap-2">
-                      <div className="w-1.5 h-1.5 bg-primary rounded-full mt-2 flex-shrink-0"></div>
-                      <span>High-resolution images (1024x1024+) produce better results</span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <div className="w-1.5 h-1.5 bg-primary rounded-full mt-2 flex-shrink-0"></div>
-                      <span>Products with clear backgrounds work best</span>
-                    </div>
-                  </div>
-                </Card>
               </div>
             </div>
           </TabsContent>
 
-          {/* Recent Tab */}
-          <TabsContent value="recent" className="space-y-6">
-            {recentGenerations.length > 0 ? (
-              <div>
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <h2 className="text-2xl font-bold text-foreground">Recent Generations</h2>
-                    <p className="text-muted-foreground">Your latest AI-generated variations</p>
-                  </div>
-                  <Button
-                    onClick={() => setActiveTab('upload')}
-                    variant="default"
-                    className="gap-2"
-                  >
-                    <Plus className="h-4 w-4" />
-                    New Generation
-                  </Button>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  {recentGenerations.map((generation) => (
-                    <Card
-                      key={generation.generation_id}
-                      className="group cursor-pointer transition-all duration-300 hover:shadow-strong hover:-translate-y-1 overflow-hidden"
-                      onClick={() => handleViewGeneration(generation.generation_id)}
-                    >
-                      <div className="aspect-video relative overflow-hidden">
-                        {generation.thumbnail_url ? (
-                          <img
-                            src={generation.thumbnail_url}
-                            alt={`Generation from ${generation.original_filename}`}
-                            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                            loading="lazy"
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-muted flex items-center justify-center">
-                            <Upload className="h-8 w-8 text-muted-foreground" />
-                          </div>
-                        )}
-
-                        <div className="absolute top-3 left-3">
-                          <Badge className="bg-green-500/10 text-green-700 border-green-200">
-                            <Zap className="h-3 w-3 mr-1" />
-                            {generation.status}
-                          </Badge>
-                        </div>
-                      </div>
-
-                      <div className="p-4">
-                        <h3 className="font-semibold text-foreground truncate mb-1">
-                          {generation.original_filename}
-                        </h3>
-                        <div className="flex items-center justify-between text-sm text-muted-foreground">
-                          <span>{generation.generated_count} images</span>
-                          <span>{formatDate(generation.created_at)}</span>
-                        </div>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <Card className="p-12 text-center">
-                <div className="space-y-6">
-                  <div className="w-24 h-24 bg-muted rounded-full flex items-center justify-center mx-auto">
-                    <Clock className="h-12 w-12 text-muted-foreground" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-semibold text-foreground mb-2">No recent generations</h3>
-                    <p className="text-muted-foreground mb-6">
-                      Upload your first image to start creating amazing AI variations.
-                    </p>
-                    <Button
-                      onClick={() => setActiveTab('upload')}
-                      variant="default"
-                      size="lg"
-                      className="gap-2"
-                    >
-                      <Upload className="h-5 w-5" />
-                      Start Generating
-                      <ArrowRight className="h-5 w-5" />
-                    </Button>
-                  </div>
-                </div>
-              </Card>
-            )}
-          </TabsContent>
+          {/* Recent tab removed */}
 
           {/* All Generations Tab */}
           <TabsContent value="all" className="space-y-6">
-            <GenerationGrid
-              selectedGenerationId={selectedGenerationId}
-              onSelectGeneration={handleSelectGeneration}
-              onViewGeneration={handleViewGeneration}
-              favorites={favorites}
-              onToggleFavorite={handleToggleFavorite}
-              onDeleteGeneration={handleDeleteGeneration}
-              onShareGeneration={handleShareGeneration}
-            />
+            {selectedGenerationId ? (
+              <GenerationPanel
+                generationId={selectedGenerationId}
+                isOpen={true}
+                inline={true}
+                onClose={() => setSelectedGenerationId(null)}
+                onToggleFavorite={handleToggleFavorite}
+                isFavorite={favorites.includes(selectedGenerationId)}
+              />
+            ) : (
+              <GenerationGrid
+                selectedGenerationId={selectedGenerationId}
+                onSelectGeneration={handleSelectGeneration}
+                onViewGeneration={handleViewGeneration}
+                favorites={favorites}
+                onToggleFavorite={handleToggleFavorite}
+                onDeleteGeneration={handleDeleteGeneration}
+                onShareGeneration={handleShareGeneration}
+              />
+            )}
           </TabsContent>
         </Tabs>
       </div>
 
-      {/* Generation Detail Panel */}
+      {/* Generation Detail Panel (not used for All tab) */}
       <GenerationPanel
         generationId={selectedGenerationId}
         isOpen={isPanelOpen}

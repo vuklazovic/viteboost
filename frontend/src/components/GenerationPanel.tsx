@@ -3,7 +3,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatDate } from "@/lib/utils";
 import {
   Sheet,
@@ -40,6 +39,7 @@ interface GenerationPanelProps {
   onClose: () => void;
   onToggleFavorite?: (generationId: string) => void;
   isFavorite?: boolean;
+  inline?: boolean;
 }
 
 const GenerationPanel = ({
@@ -47,7 +47,8 @@ const GenerationPanel = ({
   isOpen,
   onClose,
   onToggleFavorite,
-  isFavorite = false
+  isFavorite = false,
+  inline = false
 }: GenerationPanelProps) => {
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
@@ -101,7 +102,7 @@ const GenerationPanel = ({
   } = useQuery({
     queryKey: ['generation', generationId],
     queryFn: () => generationId ? getGenerationDetails(generationId) : null,
-    enabled: !!generationId && isOpen,
+    enabled: !!generationId && (isOpen || inline),
     refetchOnWindowFocus: false
   });
 
@@ -243,78 +244,77 @@ const GenerationPanel = ({
     };
   };
 
-  if (!isOpen || !generationId) {
+  if ((!isOpen && !inline) || !generationId) {
     return null;
   }
 
-  return (
-    <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="!w-full !max-w-none md:!max-w-3xl lg:!max-w-5xl p-0" side="right">
-        <div className="h-full flex flex-col">
-          <SheetHeader className="p-3 md:p-6 border-b bg-background/95 backdrop-blur-sm sticky top-0 z-10">
-            <div className="flex items-center justify-between gap-2 md:gap-4">
-              <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
-                <Button
-                  onClick={onClose}
-                  variant="ghost"
-                  size="sm"
-                  className="h-10 w-10 p-0 flex-shrink-0 touch-manipulation"
-                >
-                  <X className="h-5 w-5" />
-                </Button>
-                <div className="min-w-0 flex-1">
-                  <SheetTitle className="text-base md:text-xl truncate">
-                    {generation?.original_filename || 'Loading...'}
-                  </SheetTitle>
-                  {generation && (
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-xs md:text-sm text-muted-foreground mt-1">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-3.5 w-3.5 md:h-4 md:w-4" />
-                        <span className="truncate">{formatDate(generation.created_at)}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <ImageIcon className="h-3.5 w-3.5 md:h-4 md:w-4" />
-                        <span>{generation.generated_images.length} images</span>
-                      </div>
-                    </div>
-                  )}
+  const HeaderBlock = (
+    <div className="p-3 md:p-6 pt-[max(env(safe-area-inset-top),0px)] border-b bg-background/95 backdrop-blur-sm md:sticky md:top-0 z-10">
+      <div className="flex items-center justify-between gap-2 md:gap-4">
+        <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-1">
+          <Button
+            onClick={onClose}
+            variant="ghost"
+            size="sm"
+            className="h-10 w-10 p-0 flex-shrink-0 touch-manipulation"
+          >
+            <X className="h-5 w-5" />
+          </Button>
+          <div className="min-w-0 flex-1">
+            <div className="text-base md:text-xl truncate font-semibold">
+              {generation?.original_filename || 'Loading...'}
+            </div>
+            {generation && (
+              <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3 text-xs md:text-sm text-muted-foreground mt-1">
+                <div className="flex items-center gap-1">
+                  <Calendar className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                  <span className="truncate">{formatDate(generation.created_at)}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <ImageIcon className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                  <span>{generation.generated_images.length} images</span>
                 </div>
               </div>
+            )}
+          </div>
+        </div>
 
-              {generation && (
-                <div className="flex items-center gap-1 md:gap-2">
-                  <Button
-                    onClick={() => onToggleFavorite?.(generationId)}
-                    variant="ghost"
-                    size="sm"
-                    className={`h-10 w-10 p-0 touch-manipulation ${isFavorite ? 'text-yellow-500 hover:text-yellow-600' : ''}`}
-                  >
-                    {isFavorite ? <Star className="h-5 w-5 fill-current" /> : <StarOff className="h-5 w-5" />}
-                  </Button>
-                  <Button
-                    onClick={() => copyToClipboard(generationId, 'Generation ID')}
-                    variant="ghost"
-                    size="sm"
-                    className="h-10 w-10 p-0 touch-manipulation hidden sm:flex"
-                  >
-                    <Copy className="h-5 w-5" />
-                  </Button>
-                  <Button
-                    onClick={handleDownloadAll}
-                    variant="outline"
-                    size="sm"
-                    className="gap-1 md:gap-2 h-10 px-3 md:px-4 touch-manipulation"
-                  >
-                    <Download className="h-4 w-4" />
-                    <span className="hidden sm:inline">Download All</span>
-                  </Button>
-                </div>
-              )}
-            </div>
-          </SheetHeader>
+        {generation && (
+          <div className="flex items-center gap-1 md:gap-2">
+            <Button
+              onClick={() => onToggleFavorite?.(generationId)}
+              variant="ghost"
+              size="sm"
+              className={`h-10 w-10 p-0 touch-manipulation ${isFavorite ? 'text-yellow-500 hover:text-yellow-600' : ''}`}
+            >
+              {isFavorite ? <Star className="h-5 w-5 fill-current" /> : <StarOff className="h-5 w-5" />}
+            </Button>
+            <Button
+              onClick={() => copyToClipboard(generationId, 'Generation ID')}
+              variant="ghost"
+              size="sm"
+              className="h-10 w-10 p-0 touch-manipulation hidden sm:flex"
+            >
+              <Copy className="h-5 w-5" />
+            </Button>
+            <Button
+              onClick={handleDownloadAll}
+              variant="outline"
+              size="sm"
+              className="gap-1 md:gap-2 h-10 px-3 md:px-4 touch-manipulation"
+            >
+              <Download className="h-4 w-4" />
+              <span className="hidden sm:inline">Download All</span>
+            </Button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 
-          <ScrollArea className="flex-1">
-            <div className="p-3 md:p-6">
+  const BodyBlock = (
+    <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+      <div className="p-3 md:p-6">
               {isLoading && (
                 <div className="space-y-6">
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
@@ -357,12 +357,15 @@ const GenerationPanel = ({
                         onTouchMove={onTouchMove}
                         onTouchEnd={onTouchEnd}
                       >
-                        <div className="relative w-full min-h-[50vh] md:min-h-[60vh] max-h-[70vh] flex items-center justify-center">
+                        <div
+                          className="relative w-full max-h-[85vh] flex items-center justify-center"
+                          style={{ height: "min(70dvh, calc(var(--app-vh, 100vh) * 0.7))" }}
+                        >
                           <img
                             ref={imageRef}
                             src={generation.generated_images[selectedImageIndex].url}
                             alt={`Generated image ${selectedImageIndex + 1}`}
-                            className="w-full h-auto max-h-[70vh] object-contain transition-transform duration-300"
+                            className="w-full h-full object-contain transition-transform duration-300"
                           />
 
                           {generation.generated_images.length > 1 && (
@@ -555,8 +558,25 @@ const GenerationPanel = ({
                   )}
                 </div>
               )}
-            </div>
-          </ScrollArea>
+      </div>
+    </div>
+  );
+
+  if (inline) {
+    return (
+      <div className="w-full flex flex-col min-h-[60vh] min-h-[60svh] border rounded-xl overflow-hidden">
+        {HeaderBlock}
+        {BodyBlock}
+      </div>
+    );
+  }
+
+  return (
+    <Sheet open={isOpen} onOpenChange={onClose}>
+      <SheetContent className="!w-full !max-w-none h-[100dvh] md:h-auto md:!max-w-3xl lg:!max-w-5xl p-0" side="right">
+        <div className="h-full min-h-0 flex flex-col">
+          {HeaderBlock}
+          {BodyBlock}
         </div>
       </SheetContent>
     </Sheet>
