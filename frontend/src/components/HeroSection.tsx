@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Sparkles, Download } from "lucide-react";
+import { Sparkles, ArrowRight } from "lucide-react";
 import heroImage from "@/assets/hero-products.jpg";
 
 interface HeroSectionProps {
@@ -28,9 +28,15 @@ const HeroSection = ({ onTryNow }: HeroSectionProps) => {
             </div>
 
             <div className="flex flex-col sm:flex-row gap-4">
-              <Button variant="premium" size="lg" className="text-lg px-8 py-6 group">
-                <Download className="h-5 w-5 transition-transform group-hover:scale-110" />
-                See Examples
+              <Button
+                variant="premium"
+                size="lg"
+                className="text-lg px-8 py-6"
+                onClick={onTryNow}
+              >
+                <Sparkles className="h-5 w-5 mr-2" />
+                Start Generating
+                <ArrowRight className="h-5 w-5 ml-2" />
               </Button>
             </div>
 

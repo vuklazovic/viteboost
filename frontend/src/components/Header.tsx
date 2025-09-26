@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Zap, LogOut, User, Loader2, CreditCard } from "lucide-react";
+import { Zap, LogOut, User, Loader2, CreditCard, Menu, X } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -13,11 +13,13 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { useAuthModal } from "@/hooks/useAuthModal";
 import { AuthModal } from "@/components/auth/AuthModal";
+import { useState } from "react";
 
 const Header = () => {
-  const { user, logout, isAuthenticated, credits, creditsLoading } = useAuth();
+  const { user, logout, isAuthenticated, credits, creditsLoading, plan } = useAuth();
   const authModal = useAuthModal();
   const navigate = useNavigate();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const getInitials = (email: string) => {
     return email.substring(0, 2).toUpperCase();
@@ -33,6 +35,7 @@ const Header = () => {
   };
 
   const handleSectionNavigation = (sectionId: string) => {
+    setMobileMenuOpen(false);
     if (window.location.pathname === '/') {
       // If on home page, scroll to section
       const element = document.getElementById(sectionId);
@@ -96,6 +99,7 @@ const Header = () => {
                   <Zap className="h-3 w-3 text-primary" />
                 )}
                 <span>{creditsLoading ? '…' : credits}</span>
+                <span className="text-muted-foreground">credits</span>
               </div>
 
               {/* Full credits pill for >= sm */}
@@ -113,6 +117,17 @@ const Header = () => {
               </div>
             </>
           )}
+
+          {/* Mobile menu button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="md:hidden"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          >
+            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </Button>
+
           {isAuthenticated ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -145,26 +160,57 @@ const Header = () => {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <>
-              <Button 
-                variant="ghost" 
-                className="hidden md:inline-flex"
-                onClick={() => authModal.openLogin()}
-              >
-                Sign In
-              </Button>
-              <Button 
-                variant="hero" 
-                size="sm"
-                onClick={() => authModal.openLogin()}
-              >
-                Try Free
-              </Button>
-            </>
+            <Button
+              variant="ghost"
+              className="hidden md:inline-flex"
+              onClick={() => authModal.openLogin()}
+            >
+              Sign In
+            </Button>
           )}
         </div>
       </div>
-      
+
+      {/* Mobile Navigation Menu */}
+      {mobileMenuOpen && (
+        <div className="md:hidden border-t border-border bg-background">
+          <nav className="container mx-auto px-4 py-4 flex flex-col gap-4">
+            <button
+              onClick={handleGenerateClick}
+              className="text-left text-muted-foreground hover:text-foreground transition-colors py-2"
+            >
+              Generate
+            </button>
+            <button
+              onClick={() => handleSectionNavigation('features')}
+              className="text-left text-muted-foreground hover:text-foreground transition-colors py-2"
+            >
+              Features
+            </button>
+            <button
+              onClick={() => handleSectionNavigation('pricing')}
+              className="text-left text-muted-foreground hover:text-foreground transition-colors py-2"
+            >
+              Pricing
+            </button>
+            {!isAuthenticated && (
+              <div className="pt-2 border-t border-border">
+                <Button
+                  variant="ghost"
+                  className="w-full"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    authModal.openLogin();
+                  }}
+                >
+                  Sign In
+                </Button>
+              </div>
+            )}
+          </nav>
+        </div>
+      )}
+
       <AuthModal
         isOpen={authModal.isOpen}
         onClose={authModal.closeModal}

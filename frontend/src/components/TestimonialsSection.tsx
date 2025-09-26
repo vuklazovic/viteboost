@@ -95,11 +95,6 @@ const TestimonialsSection = () => {
           </div>
         </div>
 
-        <div className="text-center mt-12">
-          <Button variant="premium" size="lg" className="text-lg px-8 py-6">
-            Join the Community
-          </Button>
-        </div>
       </div>
     </section>
   );

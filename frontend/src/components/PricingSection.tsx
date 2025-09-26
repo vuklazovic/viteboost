@@ -236,17 +236,6 @@ const PricingSection = ({ onTryNow }: PricingSectionProps) => {
             <span>✓ No setup fees</span>
             <span>✓ Cancel anytime</span>
           </div>
-          <Button
-            variant="hero"
-            size="lg"
-            className="mt-8"
-            onClick={() => {
-              window.scrollTo(0, 0);
-              navigate('/generate');
-            }}
-          >
-            Start Generating Now
-          </Button>
         </div>
       </div>
     </section>

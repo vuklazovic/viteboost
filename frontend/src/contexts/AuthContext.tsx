@@ -28,6 +28,7 @@ interface AuthContextType {
   costPerImage: number
   numImages: number
   creditsLoading: boolean
+  plan: string
   refreshCredits: () => Promise<void>
   refreshCreditsImmediate: () => Promise<void>
   updateCredits: (newCredits: number) => void
@@ -62,6 +63,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [numImages, setNumImages] = useState<number>(3)
   const [creditsLoading, setCreditsLoading] = useState<boolean>(false)
   const [authReady, setAuthReady] = useState<boolean>(false)
+  const [plan, setPlan] = useState<string>('free')
   
   // Track if credits have been fetched to prevent infinite loops
   const creditsFetched = useRef(false)
@@ -436,7 +438,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
               localStorage.setItem('auth_session', JSON.stringify(validSession))
             }
 
-            // Try to restore credits from localStorage (but still fetch fresh data)
+            // Try to restore credits and plan from localStorage (but still fetch fresh data)
             const storedCredits = localStorage.getItem('auth_credits')
             if (storedCredits) {
               try {
@@ -448,6 +450,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
                 console.error('Failed to parse stored credits:', error)
                 localStorage.removeItem('auth_credits')
               }
+            }
+
+            const storedPlan = localStorage.getItem('auth_plan')
+            if (storedPlan) {
+              setPlan(storedPlan)
             }
 
             // Mark auth as ready only when we have a valid session
@@ -603,6 +610,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     localStorage.removeItem('auth_session')
     localStorage.removeItem('auth_user')
     localStorage.removeItem('auth_credits')
+    localStorage.removeItem('auth_plan')
 
     // Optional: Call backend logout endpoint
     if (session?.access_token) {
@@ -613,6 +621,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     toast.success('Logged out successfully')
     setCredits(0)
+    setPlan('free')
 
     // Navigate to home page by setting window location directly
     window.location.href = '/'
@@ -714,6 +723,16 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setCostPerImage(costPerImage)
       setNumImages(numImages)
 
+      // Also fetch plan info from subscription status
+      try {
+        const subRes = await axios.get('/subscriptions/status')
+        const planName = subRes.data?.plan?.name || 'Free'
+        setPlan(planName)
+        localStorage.setItem('auth_plan', planName)
+      } catch (planError) {
+        console.warn('Failed to fetch plan info:', planError)
+      }
+
       // Store credits in localStorage for persistence
       localStorage.setItem('auth_credits', JSON.stringify({
         credits,
@@ -810,6 +829,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     costPerImage,
     numImages,
     creditsLoading,
+    plan,
     refreshCredits,
     refreshCreditsImmediate,
     updateCredits,
