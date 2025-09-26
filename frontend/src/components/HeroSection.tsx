@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Sparkles, ArrowRight } from "lucide-react";
-import heroImage from "@/assets/hero-products.jpg";
+import heroImage from "@/assets/hero-products.png";
 
 interface HeroSectionProps {
   onTryNow?: () => void;
@@ -57,15 +57,11 @@ const HeroSection = ({ onTryNow }: HeroSectionProps) => {
           </div>
 
           <div className="relative">
-            <div className="relative z-10 rounded-2xl overflow-hidden shadow-strong">
-              <img
-                src={heroImage}
-                alt="Professional product photography showcase"
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <div className="absolute inset-0 bg-gradient-primary opacity-20 rounded-2xl"></div>
-            <div className="absolute -inset-4 bg-gradient-primary opacity-10 rounded-3xl blur-xl"></div>
+            <img
+              src={heroImage}
+              alt="Professional product photography showcase"
+              className="w-full h-full object-contain"
+            />
           </div>
         </div>
       </div>
